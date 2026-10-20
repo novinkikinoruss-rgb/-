@@ -3,6 +3,7 @@ import {useEffect,useState} from 'react';
 import {Registry, type RegistryName} from '../components/Registry';
 import {Dispatch} from '../components/Dispatch';
 import {Finance} from '../components/Finance';
+import {Documents} from '../components/Documents';
 import {createClient, type User} from '@supabase/supabase-js';
 import {LayoutDashboard,Building2,Truck,Users,Route,ClipboardList,Wallet,FileText,BarChart3,LogOut,Search,Plus,Menu} from 'lucide-react';
 const supabase=createClient('https://yoqejkedmksmvbqagqru.supabase.co','sb_publishable_qnb1bLiXSsB-9VuwFMtCiQ_07nL4hyQ');
@@ -36,9 +37,10 @@ return <div className="shell"><aside className={'side '+(mobile?'open':'')}><div
 {(['Перевозчики','Автопарк','Водители'] as string[]).includes(page)&&<Registry name={page as RegistryName}/>}
 {page==='Диспетчеризация'&&<Dispatch/>}
 {page==='Бухгалтерия'&&<Finance/>}
+{page==='Документы'&&<Documents/>}
 {page==='Заказчики'&&<section className="panel"><h2>Реестр заказчиков · {filteredCustomers.length}</h2><div className="tablewrap"><table><thead><tr><th>Компания</th><th>ИНН</th><th>Телефон</th><th>Email</th></tr></thead><tbody>{filteredCustomers.map(c=><tr key={c.id}><td className="strong">{c.name}</td><td>{c.inn||'—'}</td><td>{c.phone||'—'}</td><td>{c.email||'—'}</td></tr>)}</tbody></table>{!filteredCustomers.length&&<div className="empty">Заказчиков пока нет</div>}</div></section>}
 {page==='Заявки и рейсы'&&<section className="panel"><h2>Реестр перевозок · {filteredOrders.length}</h2>{table}</section>}
 {page==='Аналитика'&&<><div className="cards">{[[fmt(revenue),'Выручка'],[fmt(revenue-profit),'Затраты'],[fmt(profit),'Маржа'],[revenue?(profit/revenue*100).toFixed(1)+'%':'0%','Рентабельность']].map(([v,l])=><div className="card" key={l}><div className="metric">{v}</div><div className="metric-title">{l}</div></div>)}</div><section className="panel">{table}</section></>}
-{!['Главная','Заказчики','Заявки и рейсы','Аналитика','Перевозчики','Автопарк','Водители','Диспетчеризация','Бухгалтерия'].includes(page)&&<section className="panel"><h2>{page}</h2><div className="empty">Раздел в разработке. Таблица в Supabase подготовлена для дальнейшего подключения.</div></section>}</div></main>
+{!['Главная','Заказчики','Заявки и рейсы','Аналитика','Перевозчики','Автопарк','Водители','Диспетчеризация','Бухгалтерия','Документы'].includes(page)&&<section className="panel"><h2>{page}</h2><div className="empty">Раздел в разработке. Таблица в Supabase подготовлена для дальнейшего подключения.</div></section>}</div></main>
 {modal&&<div className="modalback" onClick={()=>setModal(null)}><div className="modal" role="dialog" aria-modal="true" onClick={e=>e.stopPropagation()}><h2>{modal==='customer'?'Новый заказчик':modal==='order'?'Новая заявка':'Новая задача'}</h2><form onSubmit={e=>void save(e)}><div className="form">{modal==='customer'&&<>{field('Компания *','name',true)}{field('ИНН','inn')}{field('Телефон','phone')}{field('Email','email',false,'email')}</>}{modal==='order'&&<><label className="field wide">Заказчик *<select required value={form.customer_id??''} onChange={e=>edit('customer_id',e.target.value)}>{customers.map(c=><option key={c.id} value={c.id}>{c.name}</option>)}</select></label>{field('Откуда *','origin',true)}{field('Куда *','destination',true)}<label className="field wide">Груз<input value={form.cargo??''} onChange={e=>edit('cargo',e.target.value)}/></label>{field('Тариф, ₽','price',false,'number')}{field('Затраты, ₽','cost',false,'number')}</>}{modal==='task'&&<label className="field wide">Задача *<input required value={form.title??''} onChange={e=>edit('title',e.target.value)}/></label>}</div><div className="actions"><button type="button" className="button secondary" onClick={()=>setModal(null)}>Отмена</button><button className="button" disabled={busy}>{busy?'Сохранение...':'Сохранить'}</button></div></form></div></div>}</div>;
 }
