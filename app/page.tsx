@@ -7,6 +7,7 @@ import {Documents} from '../components/Documents';
 import {FleetOperations} from '../components/FleetOperations';
 import {Sites} from '../components/Sites';
 import {Contracts} from '../components/Contracts';
+import {DriverPayroll} from '../components/DriverPayroll';
 import {createClient, type User} from '@supabase/supabase-js';
 import {LayoutDashboard,Building2,Truck,Users,Route,ClipboardList,Wallet,FileText,BarChart3,LogOut,Search,Plus,Menu} from 'lucide-react';
 const supabase=createClient('https://yoqejkedmksmvbqagqru.supabase.co','sb_publishable_qnb1bLiXSsB-9VuwFMtCiQ_07nL4hyQ');
@@ -15,7 +16,7 @@ type Site={id:string;customer_id:string;name:string;loading_address:string;unloa
 type Order={id:string;site_id:string|null;order_number:string;customer_id:string;origin:string;destination:string;cargo:string|null;price:number;cost:number;status:string};
 type Task={id:string;title:string;done:boolean;due_at:string|null;order_id:string|null};
 const fmt=(n:number)=>new Intl.NumberFormat('ru-RU',{style:'currency',currency:'RUB',maximumFractionDigits:0}).format(n);
-const nav=[['Главная',LayoutDashboard],['Задачи',ClipboardList],['Заказчики',Building2],['Объекты',Building2],['Договоры',FileText],['Перевозчики',Users],['Заявки и рейсы',Route],['Диспетчеризация',ClipboardList],['Автопарк',Truck],['ГСМ',Truck],['ТО и ремонты',Truck],['Водители',Users],['Бухгалтерия',Wallet],['Документы',FileText],['Аналитика',BarChart3]] as const;
+const nav=[['Главная',LayoutDashboard],['Задачи',ClipboardList],['Заказчики',Building2],['Объекты',Building2],['Договоры',FileText],['Перевозчики',Users],['Заявки и рейсы',Route],['Диспетчеризация',ClipboardList],['Автопарк',Truck],['ГСМ',Truck],['ТО и ремонты',Truck],['Водители',Users],['Зарплата и штрафы',Wallet],['Бухгалтерия',Wallet],['Документы',FileText],['Аналитика',BarChart3]] as const;
 export default function Home(){
 const [user,setUser]=useState<User|null>(null),[ready,setReady]=useState(false),[email,setEmail]=useState(''),[password,setPassword]=useState(''),[authMode,setAuthMode]=useState<'login'|'register'>('login');
 const [page,setPage]=useState('Главная'),[customers,setCustomers]=useState<Customer[]>([]),[orders,setOrders]=useState<Order[]>([]),[tasks,setTasks]=useState<Task[]>([]);
@@ -60,6 +61,7 @@ return <div className="shell"><aside className={'side '+(mobile?'open ':'')+(nav
 {page==='Документы'&&<Documents/>}
 {page==='Объекты'&&<Sites/>}
 {page==='Договоры'&&<Contracts/>}
+{page==='Зарплата и штрафы'&&<DriverPayroll/>}
 {page==='ГСМ'&&<FleetOperations kind="fuel"/>}
 {page==='ТО и ремонты'&&<FleetOperations kind="maintenance"/>}
 {page==='Заказчики'&&<section className="panel"><div className="heading"><h2>Реестр заказчиков · {filteredCustomers.length}</h2><button type="button" className="button secondary" onClick={()=>exportCsv('customers')}>Экспорт CSV</button></div><div className="tablewrap"><table><thead><tr><th>Компания</th><th>ИНН</th><th>Телефон</th><th>Email</th><th>Действия</th></tr></thead><tbody>{filteredCustomers.map(c=><tr key={c.id}><td className="strong">{c.name}</td><td>{c.inn||'—'}</td><td>{c.phone||'—'}</td><td>{c.email||'—'}</td><td><button className="button secondary" onClick={()=>{setEditingCustomer(c.id);setForm({name:c.name,inn:c.inn??'',phone:c.phone??'',email:c.email??''});setModal('customer')}}>Изменить</button> <button className="button secondary" onClick={()=>void deleteCustomer(c.id)}>Удалить</button></td></tr>)}</tbody></table>{!filteredCustomers.length&&<div className="empty">Заказчиков пока нет</div>}</div></section>}
