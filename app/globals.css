@@ -84,3 +84,34 @@ tbody tr:hover{background:#f8fbff}
 .side.compact .nav-collapse{margin-top:20px}
 .nav-collapse{margin-top:16px;border-top:1px solid #43576e;border-radius:0;padding-top:17px}
 @media(max-width:720px){.side.compact{width:225px}.side.compact .brand-title,.side.compact .section-label,.side.compact .nav-title{display:initial}.side.compact .nav{justify-content:flex-start;padding:12px 11px}.side.compact .brand{justify-content:flex-start}.side.compact .nav.active{border-left:3px solid #56a4ff;border-bottom:0;padding-left:8px}}
+
+
+/* Refined rounded CRM interface */
+:root{--crm-radius:18px;--crm-blue:#438cf0}
+.side{background:linear-gradient(165deg,#22344d 0%,#283d59 58%,#1e3049 100%);padding-top:0}
+.nav{position:relative;isolation:isolate;overflow:hidden;border-radius:13px!important;min-height:46px;padding:9px 11px!important;margin:4px 0!important;transition:background .25s ease,color .25s ease,transform .25s ease,box-shadow .25s ease!important}
+.nav:before{content:"";position:absolute;inset:0;z-index:-1;border-radius:inherit;background:linear-gradient(110deg,#68b6ff38,#7792ff1c);opacity:0;transform:translateX(-20%);transition:opacity .3s ease,transform .3s ease}
+.nav:hover{background:#ffffff13!important;color:#fff!important;transform:translateX(3px);box-shadow:0 7px 20px #0b1d3630}
+.nav:hover:before{opacity:1;transform:translateX(0)}
+.nav.active{border-left:0!important;padding-left:11px!important;background:linear-gradient(110deg,#3f91ef,#6272e9)!important;color:#fff;box-shadow:0 7px 19px #152b4852!important}
+.nav.active:before{opacity:0}
+.nav-icon{width:29px;height:29px;flex-shrink:0;display:grid;place-items:center;border-radius:10px;background:#ffffff0b;transition:background .25s ease,transform .3s ease,color .25s ease}
+.nav-icon svg{color:#a9c5e6;transition:color .25s ease}
+.nav:hover .nav-icon{background:#ffffff22;transform:scale(1.08) rotate(-4deg)}
+.nav:hover .nav-icon svg,.nav.active .nav-icon svg{color:#fff}
+.nav.active .nav-icon{background:#ffffff26}
+.brand{border-radius:0 0 16px 16px}
+.nav-collapse{border-radius:13px!important}
+.card,.panel{border-radius:var(--crm-radius)!important;transition:box-shadow .25s ease,border-color .25s ease}
+.card:hover,.panel:hover{box-shadow:0 9px 28px #233f6212}
+.card:before{border-radius:var(--crm-radius) var(--crm-radius) 0 0}
+.button{border-radius:12px!important;transition:transform .18s ease,background .18s ease,box-shadow .18s ease}
+.button:hover:not(:disabled){transform:translateY(-1px);box-shadow:0 6px 15px #438cf02b}
+.button:active:not(:disabled){transform:translateY(0)}
+.search,.field input,.field select,.pill,.status,.notice{border-radius:11px!important}
+.modal{border-radius:22px!important;animation:crmModalIn .22s ease both}
+.tablewrap{border-radius:13px!important;overflow-x:auto}
+tbody tr{transition:background .2s ease}
+@keyframes crmModalIn{from{opacity:0;transform:translateY(10px) scale(.985)}to{opacity:1;transform:translateY(0) scale(1)}}
+@media(prefers-reduced-motion:reduce){.nav,.nav:before,.nav-icon,.nav-icon svg,.card,.panel,.button,tbody tr{transition:none!important}.modal{animation:none}}
+@media(max-width:720px){.nav:hover{transform:none}.side.compact .nav.active{padding-left:11px!important}}
