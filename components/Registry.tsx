@@ -1,0 +1,18 @@
+'use client';
+import {useEffect,useState} from 'react';
+import {createClient} from '@supabase/supabase-js';
+const db=createClient('https://yoqejkedmksmvbqagqru.supabase.co','sb_publishable_qnb1bLiXSsB-9VuwFMtCiQ_07nL4hyQ');
+type Row={id:string;[key:string]:unknown};
+const configs={
+ 'Перевозчики':{table:'crm_carriers',title:'Перевозчик',cols:[['name','Название'],['inn','ИНН'],['phone','Телефон']]},
+ 'Автопарк':{table:'crm_vehicles',title:'Автомобиль',cols:[['plate','Госномер'],['brand','Марка'],['model','Модель'],['status','Статус']]},
+ 'Водители':{table:'crm_drivers',title:'Водитель',cols:[['full_name','ФИО'],['phone','Телефон']]}
+} as const;
+export type RegistryName=keyof typeof configs;
+export function Registry({name}:{name:RegistryName}){
+ const config=configs[name];const [rows,setRows]=useState<Row[]>([]),[form,setForm]=useState<Record<string,string>>({}),[show,setShow]=useState(false),[error,setError]=useState(''),[busy,setBusy]=useState(false),[search,setSearch]=useState('');
+ useEffect(()=>{let active=true;void (async()=>{const r=await db.from(config.table).select('*').order('created_at',{ascending:false});if(active){if(r.error)setError(r.error.message);else setRows((r.data??[]) as Row[])}})();return()=>{active=false}},[config.table]);
+ async function save(e:React.FormEvent){e.preventDefault();setBusy(true);setError('');const payload=Object.fromEntries(config.cols.filter(([key])=>key!=='status').map(([key])=>[key,form[key]?.trim()||null]));const r=await db.from(config.table).insert(payload).select('*').single();setBusy(false);if(r.error){setError(r.error.message);return}setRows(p=>[r.data as Row,...p]);setShow(false);setForm({})}
+ const filtered=rows.filter(r=>config.cols.some(([k])=>String(r[k]??'').toLowerCase().includes(search.toLowerCase())));
+ return <section className="panel"><div className="heading"><div><h2>{name} · {filtered.length}</h2><p className="muted">Данные сохраняются в Supabase PostgreSQL</p></div><button className="button" onClick={()=>setShow(true)}>+ Добавить</button></div><label className="search" style={{marginBottom:18}}><input placeholder="Поиск в реестре" value={search} onChange={e=>setSearch(e.target.value)}/></label>{error&&<div className="notice">{error}</div>}<div className="tablewrap"><table><thead><tr>{config.cols.map(([key,title])=><th key={key}>{title}</th>)}</tr></thead><tbody>{filtered.map(row=><tr key={row.id}>{config.cols.map(([key])=><td key={key}>{String(row[key]??'—')}</td>)}</tr>)}</tbody></table>{!filtered.length&&<div className="empty">Записей пока нет</div>}</div>{show&&<div className="modalback" onClick={()=>setShow(false)}><div className="modal" onClick={e=>e.stopPropagation()} role="dialog" aria-modal="true"><h2>Добавить: {config.title}</h2><form onSubmit={e=>void save(e)}><div className="form">{config.cols.filter(([key])=>key!=='status').map(([key,title],i)=><label key={key} className="field">{title}{i===0?' *':''}<input required={i===0} value={form[key]??''} onChange={e=>setForm(p=>({...p,[key]:e.target.value}))}/></label>)}</div>{error&&<div className="notice">{error}</div>}<div className="actions"><button type="button" className="button secondary" onClick={()=>setShow(false)}>Отмена</button><button disabled={busy} className="button">Сохранить</button></div></form></div></div>}</section>
+}
