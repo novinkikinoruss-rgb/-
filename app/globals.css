@@ -138,3 +138,5 @@ tbody tr{transition:background .2s ease}
 .wizard-progress span{display:flex;align-items:center;gap:5px;color:#a0acbf;font-size:11px}
 .wizard-progress .current{color:#438cf0;font-weight:700}.wizard-progress .complete{color:#24a478}
 @media(max-width:800px){.customer-layout{grid-template-columns:1fr}.customer-list{min-height:0}.customer-detail{padding:17px}.customer-wizard .form{grid-template-columns:1fr}.customer-wizard .field.wide{grid-column:span 1}.wizard-progress{flex-wrap:wrap}}
+
+.connection-indicator{display:inline-flex;align-items:center;gap:7px;font-size:11px;color:#697c96;white-space:nowrap;margin-right:10px}.connection-indicator i{width:9px;height:9px;border-radius:50%;background:#e6b458}.connection-indicator i.online{background:#2db889}.connection-indicator i.offline{background:#e05b62}@media(max-width:1050px){.connection-indicator span{display:none}}
