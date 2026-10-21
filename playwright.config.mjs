@@ -1,6 +1,2 @@
-import {defineConfig} from '@playwright/test';
-export default defineConfig({
- testDir:'./tests/e2e',globalTimeout:120000,workers:2,fullyParallel:true,retries:0,timeout:30000,
- use:{baseURL:'http://127.0.0.1:3000',browserName:'chromium',trace:'retain-on-failure'},
- webServer:{command:'npm start -- -H 127.0.0.1 -p 3000',url:'http://127.0.0.1:3000/api/health',reuseExistingServer:!process.env.CI,timeout:60000}
-});
+import {defineConfig,devices} from '@playwright/test';
+export default defineConfig({testDir:'./tests/e2e',fullyParallel:true,retries:0,reporter:'list',use:{baseURL:'http://127.0.0.1:3100',trace:'retain-on-failure'},projects:[{name:'desktop',use:{...devices['Desktop Chrome'],viewport:{width:1600,height:1100}}},{name:'mobile',use:{...devices['iPhone 13'],defaultBrowserType:'chromium'}}],webServer:{command:'npm start -- --hostname 127.0.0.1 --port 3100',url:'http://127.0.0.1:3100/api/health',reuseExistingServer:!process.env.CI,timeout:120000}});

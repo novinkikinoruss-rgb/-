@@ -1,7 +1,3 @@
-import type { NextConfig } from 'next';
-const nextConfig: NextConfig = {
-  async rewrites() {
-    return [{source:'/supabase/:path*',destination:'https://yoqejkedmksmvbqagqru.supabase.co/:path*'}];
-  },
-};
-export default nextConfig;
+import type {NextConfig} from 'next';
+const config: NextConfig = {poweredByHeader: false};
+export default config;

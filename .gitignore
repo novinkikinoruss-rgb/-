@@ -1,12 +1,7 @@
 node_modules/
-dist/
-.env
-.env.*
-!.env.example
-
-/playwright-report/
-/test-results/
-
 .next/
+.env*
+!.env.example
+test-results/
+playwright-report/
 *.tsbuildinfo
-npm-audit.json
