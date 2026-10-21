@@ -1,7 +1,7 @@
 'use client';
 import {useEffect,useState} from 'react';
 import {createClient} from '@supabase/supabase-js';
-const db=createClient('https://yoqejkedmksmvbqagqru.supabase.co','sb_publishable_qnb1bLiXSsB-9VuwFMtCiQ_07nL4hyQ');
+const db=createClient((typeof window==='undefined'?'https://transport-crm-ij9v.onrender.com':window.location.origin)+'/supabase','sb_publishable_qnb1bLiXSsB-9VuwFMtCiQ_07nL4hyQ');
 export function InvoiceOverview(){const [invoices,setInvoices]=useState<{id:string;invoice_number:string;amount:number}[]>([]),[payments,setPayments]=useState<{invoice_id:string;amount:number}[]>([]);
 useEffect(()=>{void (async()=>{const [i,p]=await Promise.all([db.from('crm_invoices').select('id,invoice_number,amount').is('deleted_at',null),db.from('crm_invoice_payments').select('invoice_id,amount')]);if(!i.error&&!p.error){setInvoices(i.data??[]);setPayments(p.data??[])}})()},[]);
 const paid=(id:string)=>payments.filter(p=>p.invoice_id===id).reduce((a,p)=>a+Number(p.amount),0);
