@@ -16,8 +16,8 @@ create table public.crm_trips(id uuid primary key default gen_random_uuid(),owne
 create table public.crm_invoices(id uuid primary key default gen_random_uuid(),owner_id uuid not null default auth.uid(),customer_id uuid not null references crm_customers(id),order_id uuid references crm_orders(id),trip_id uuid references crm_trips(id),invoice_number text not null,invoice_date date not null default current_date,amount numeric not null,deleted_at timestamptz);
 create table public.crm_invoice_payments(id uuid primary key default gen_random_uuid(),owner_id uuid not null default auth.uid(),invoice_id uuid not null references crm_invoices(id),amount numeric not null,payment_date date not null default current_date);
 create table public.crm_driver_fines(id uuid primary key default gen_random_uuid(),owner_id uuid not null default auth.uid(),driver_id uuid not null references crm_drivers(id),order_id uuid references crm_orders(id),fine_date date not null default current_date,amount numeric not null,reason text not null,paid boolean not null default false,deleted_at timestamptz);
-create table public.crm_documents(id uuid primary key default gen_random_uuid(),owner_id uuid not null default auth.uid(),order_id uuid references crm_orders(id),trip_id uuid references crm_trips(id),deleted_at timestamptz);
-create table public.crm_finance_entries(id uuid primary key default gen_random_uuid(),owner_id uuid not null default auth.uid(),order_id uuid references crm_orders(id),trip_id uuid references crm_trips(id),deleted_at timestamptz);
+create table public.crm_documents(id uuid primary key default gen_random_uuid(),owner_id uuid not null default auth.uid(),order_id uuid references crm_orders(id),trip_id uuid references crm_trips(id),storage_path text not null,doc_type text not null,deleted_at timestamptz);
+create table public.crm_finance_entries(id uuid primary key default gen_random_uuid(),owner_id uuid not null default auth.uid(),order_id uuid references crm_orders(id),trip_id uuid references crm_trips(id),entry_type text not null check(entry_type in ('income','expense')),category text not null,amount numeric not null check(amount>0),deleted_at timestamptz);
 do $$declare t text;begin
  foreach t in array array['crm_customers','crm_contracts','crm_sites','crm_drivers','crm_orders','crm_trips','crm_invoices','crm_invoice_payments','crm_driver_fines','crm_documents','crm_finance_entries'] loop
   execute format('alter table public.%I enable row level security',t);
@@ -25,3 +25,5 @@ do $$declare t text;begin
   execute format('grant select,insert,update,delete on public.%I to authenticated',t);
  end loop;
 end$$;
+
+create policy document_owner_path on public.crm_documents as restrictive for all to authenticated using(owner_id=(select auth.uid())) with check(storage_path like (select auth.uid())::text||'/%');

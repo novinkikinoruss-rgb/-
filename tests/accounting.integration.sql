@@ -80,8 +80,8 @@ begin
  insert into public.crm_sites(customer_id,name,loading_address,unloading_address,route_km) values(c_plain,'Объект архива','А','Б',10) returning id into s_plain;
  insert into public.crm_trips(customer_id,site_id,driver_id,trip_number,trip_date,status) values(c_plain,s_plain,d,'АРХИВ-НОВЫЙ','2026-10-10','sent') returning id into t_plain;
  insert into public.crm_trips(customer_id,site_id,driver_id,trip_number,trip_date,status,deleted_at) values(c_plain,s_plain,d,'АРХИВ-СТАРЫЙ','2026-10-10','sent','2026-01-01') returning id into t_prior;
- insert into public.crm_documents(trip_id) values(t_plain);
- insert into public.crm_finance_entries(trip_id) values(t_plain);
+ insert into public.crm_documents(trip_id,storage_path,doc_type) values(t_plain,auth.uid()::text||'/test-archive.pdf','other');
+ insert into public.crm_finance_entries(trip_id,entry_type,category,amount) values(t_plain,'expense','Тестовая операция',1);
  perform public.crm_archive_customer(c_plain,false);
  if not exists(select 1 from public.crm_customers where id=c_plain and is_archived and deleted_at is not null) or not exists(select 1 from public.crm_trips where id=t_plain and deleted_at is not null) then raise exception 'TEST: архив не охватил прямой рейс';end if;
  if exists(select 1 from public.crm_documents where trip_id=t_plain and deleted_at is null) or exists(select 1 from public.crm_finance_entries where trip_id=t_plain and deleted_at is null) then raise exception 'TEST: прямые связи документов и операций не включены в архив';end if;
