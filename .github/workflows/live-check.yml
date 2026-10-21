@@ -1,0 +1,19 @@
+name: Respectlogistic live check
+on:
+  push:
+    branches: ['respectlogistic/**']
+    paths:
+      - '.github/workflows/live-check.yml'
+      - 'scripts/verify-deployment.mjs'
+permissions:
+  contents: read
+jobs:
+  public-service:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: node scripts/verify-deployment.mjs
