@@ -1,7 +1,5 @@
 name: CRM checks
 on:
-  push:
-    branches: ['codex/accounting-workflow']
   pull_request:
     branches: [main]
 permissions:

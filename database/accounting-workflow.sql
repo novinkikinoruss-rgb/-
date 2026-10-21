@@ -84,7 +84,7 @@ begin
  elsif tg_table_name='crm_payroll_payments' then
   select * into a from public.crm_payroll_accruals where id=new.accrual_id and owner_id=auth.uid() and active for update;
   if a.id is null or new.payment_date<a.accrual_date then raise exception 'Нельзя оплатить отсутствующее начисление или указать дату до рейса'; end if;
-  if (select coalesce(sum(amount),0) from public.crm_payroll_payments where accrual_id=a.id and kind=new.kind)+new.amount>case when new.kind='salary' then a.base+a.bonus-(select coalesce(sum(amount),0) from public.crm_payroll_deductions where accrual_id=a.id) else a.tax end then raise exception 'Сумма оплаты превышает остаток'; end if;
+  if (select coalesce(sum(amount),0) from public.crm_payroll_payments where accrual_id=a.id and kind=new.kind)+new.amount>(case when new.kind='salary' then a.base+a.bonus-(select coalesce(sum(amount),0) from public.crm_payroll_deductions where accrual_id=a.id) else a.tax end) then raise exception 'Сумма оплаты превышает остаток'; end if;
  elsif tg_table_name='crm_payroll_deductions' then
   select * into a from public.crm_payroll_accruals where id=new.accrual_id and owner_id=auth.uid() and active for update;
   select * into f from public.crm_driver_fines where id=new.fine_id and owner_id=auth.uid() and deleted_at is null for update;
