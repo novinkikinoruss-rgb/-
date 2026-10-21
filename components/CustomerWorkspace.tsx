@@ -14,18 +14,41 @@ const [customers,setCustomers]=useState<Customer[]>([]),[contracts,setContracts]
 const [selected,setSelected]=useState(''),[step,setStep]=useState(0),[form,setForm]=useState<Record<string,string>>({}),[busy,setBusy]=useState(false),[error,setError]=useState(''),[lookup,setLookup]=useState(''),[tab,setTab]=useState<'overview'|'contracts'|'specs'|'sites'>('overview'),[filter,setFilter]=useState('');
 const [marked,setMarked]=useState<string[]>([]);
 const [toast,setToast]=useState('');
+const [trash,setTrash]=useState<Customer[]>([]);
 useEffect(()=>{if(!toast)return;const timer=setTimeout(()=>setToast(''),10000);return()=>clearTimeout(timer)},[toast]);
 const current=customers.find(c=>c.id===selected);
 function toggle(id:string){setMarked(prev=>prev.includes(id)?prev.filter(x=>x!==id):[...prev,id])}
+async function archiveRelations(id:string,restore=false){
+ const value=restore?null:new Date().toISOString();
+ const customerContracts=contracts.filter(c=>c.customer_id===id).map(c=>c.id);
+ const customerOrders=await db.from('crm_orders').select('id').eq('customer_id',id);
+ if(customerOrders.error)throw customerOrders.error;
+ const ids=(customerOrders.data??[]).map(x=>x.id);
+ const update=async(table:string,column:string,values:string[])=>{
+  if(!values.length)return;
+  let q=db.from(table).update({deleted_at:value}).in(column,values);
+  if(!restore)q=q.is('deleted_at',null);
+  const r=await q;if(r.error)throw r.error;
+ };
+ for(const t of ['crm_documents','crm_driver_fines','crm_finance_entries','crm_fuel_entries','crm_tasks','crm_trips'])await update(t,'order_id',ids);
+ await update('crm_contract_rates','contract_id',customerContracts);
+ await update('crm_specifications','contract_id',customerContracts);
+ for(const t of ['crm_orders','crm_sites','crm_customer_sites','crm_contracts'])await update(t,'customer_id',[id]);
+ const result=await db.from('crm_customers').update({deleted_at:value,is_archived:!restore}).eq('id',id);
+ if(result.error)throw result.error;
+}
+async function restoreCustomer(id:string){
+ if(!window.confirm('Восстановить заказчика и связанные данные?'))return;
+ setBusy(true);setError('');
+ try{await archiveRelations(id,true);await load();setToast('Заказчик и связанные данные восстановлены')}catch(e){setError(e instanceof Error?e.message:'Ошибка восстановления')}finally{setBusy(false)}
+}
 async function removeSelected(){
  if(!marked.length)return;
  if(!window.confirm('Убрать выбранных заказчиков из активного списка: '+marked.length+'? Связанные заявки и договоры сохранятся в истории.'))return;
  setBusy(true);setError('');
  let count=0;const failures:string[]=[];
  for(const id of marked){
-  const result=await db.from('crm_customers').update({is_archived:true}).eq('id',id).select('id');
-  if(result.error)failures.push(result.error.message);
-  else if(result.data?.length)count++;
+  try{await archiveRelations(id);count++}catch(e){failures.push(e instanceof Error?e.message:'Ошибка удаления')}
  }
  setBusy(false);setMarked([]);
  if(marked.includes(selected))setSelected('');
@@ -34,7 +57,7 @@ async function removeSelected(){
  if(failures.length)setError('Не все записи удалены: '+failures.join('; '));
 }
 
-async function load(){const [a,b,c,d]=await Promise.all([db.from('crm_customers') .select('id,name,inn,phone,email').eq('is_archived',false).order('created_at',{ascending:false}),db.from('crm_contracts').select('id,customer_id,contract_number,contract_type,contract_date').order('created_at',{ascending:false}),db.from('crm_specifications').select('id,contract_id,specification_number,service_name,rate,unit').order('created_at',{ascending:false}),db.from('crm_sites').select('id,customer_id,contract_id,specification_id,name,loading_address,unloading_address,route_km').order('created_at',{ascending:false})]);const err=a.error??b.error??c.error??d.error;if(err)setError(err.message);else{setCustomers(a.data??[]);setContracts(b.data??[]);setSpecs(c.data??[]);setSites(d.data??[])}}
+async function load(){const [a,b,c,d]=await Promise.all([db.from('crm_customers') .select('id,name,inn,phone,email').eq('is_archived',false).order('created_at',{ascending:false}),db.from('crm_contracts').select('id,customer_id,contract_number,contract_type,contract_date').order('created_at',{ascending:false}),db.from('crm_specifications').select('id,contract_id,specification_number,service_name,rate,unit').order('created_at',{ascending:false}),db.from('crm_sites').select('id,customer_id,contract_id,specification_id,name,loading_address,unloading_address,route_km').order('created_at',{ascending:false})]);const archived=await db.from('crm_customers').select('id,name,inn,phone,email').eq('is_archived',true).order('created_at',{ascending:false});const err=a.error??b.error??c.error??d.error??archived.error;if(err)setError(err.message);else{setCustomers(a.data??[]);setTrash(archived.data??[]);setContracts(b.data??[]);setSpecs(c.data??[]);setSites(d.data??[])}}
 useEffect(()=>{void load()},[]);
 const update=(k:string,v:string)=>setForm(p=>({...p,[k]:v}));
 const cc=contracts.filter(c=>c.customer_id===selected),ss=specs.filter(s=>cc.some(c=>c.id===s.contract_id)),st=sites.filter(s=>s.customer_id===selected);
@@ -53,7 +76,7 @@ if(step===4){const r=await db.from('crm_sites').insert({customer_id:selected,con
 const input=(label:string,k:string,required=false,type='text')=><label className="field">{label}<input required={required} type={type} value={form[k]??''} onChange={e=>update(k,e.target.value)}/></label>;
 const dropdown=(label:string,k:string,rows:{id:string;label:string}[])=><label className="field">{label}<select required value={form[k]??''} onChange={e=>update(k,e.target.value)}>{rows.map(x=><option key={x.id} value={x.id}>{x.label}</option>)}</select></label>;
 return <div className="customer-workspace"><div className="heading"><div><h2>Заказчики · {customers.length}</h2><p className="muted">Единая карточка: реквизиты → договор → спецификация → объект</p></div><button className="button" onClick={start}>+ Создать заказчика</button></div>{error&&<div className="notice">{error}</div>}
-{toast&&<div role="status" className="customer-toast">{toast}</div>}
+{toast&&<div role="status" className="customer-toast">✓ {toast}</div>}
 {marked.length>0&&<div className="customer-selection"><span>Выбрано: {marked.length}</span><button type="button" className="button secondary" onClick={()=>setMarked([])}>Снять выделение</button><button type="button" className="button" disabled={busy} onClick={()=>void removeSelected()}>Удалить выбранных</button></div>}
 <div className="customer-layout"><aside className="panel customer-list"><label className="search" style={{width:'100%'}}><Search size={16}/><input placeholder="Компания или ИНН" value={filter} onChange={e=>setFilter(e.target.value)}/></label>{customers.filter(c=>(c.name+' '+(c.inn??'')).toLowerCase().includes(filter.toLowerCase())).map(c=><div key={c.id} className="customer-select-row"><input type="checkbox" aria-label={'Выбрать '+c.name} checked={marked.includes(c.id)} onChange={()=>toggle(c.id)}/><button className={'customer-item '+(selected===c.id?'chosen':'')} onClick={()=>{setSelected(c.id);setStep(0);setTab('overview')}}><Building2 size={19}/><span><strong>{c.name}</strong><small>ИНН {c.inn||'не указан'}</small></span><ChevronRight size={16}/></button></div>)}</aside>
 <section className="panel customer-detail">{current?<><div className="customer-profile"><span className="customer-avatar"><Building2 size={28}/></span><div style={{flex:1}}><h2 style={{fontSize:21,margin:'0 0 5px',textTransform:'none'}}>{current.name}</h2><p className="muted">ИНН {current.inn||'—'} · {current.phone||'Телефон не указан'}</p></div><button className="button secondary" onClick={()=>editCustomer(current)}>Изменить</button></div><div className="customer-tabs">{([['overview','Карточка'],['contracts','Договоры'],['specs','Спецификации'],['sites','Объекты']] as const).map(([id,label])=><button className={tab===id?'chosen':''} onClick={()=>setTab(id)} key={id}>{label} <small>{id==='contracts'?cc.length:id==='specs'?ss.length:id==='sites'?st.length:''}</small></button>)}</div>
