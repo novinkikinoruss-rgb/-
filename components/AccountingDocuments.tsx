@@ -1,7 +1,6 @@
 'use client';
 import {useEffect,useState} from 'react';
-import {createClient} from '@supabase/supabase-js';
-const db=createClient((typeof window==='undefined'?'https://transport-crm-ij9v.onrender.com':window.location.origin)+'/supabase','sb_publishable_qnb1bLiXSsB-9VuwFMtCiQ_07nL4hyQ');
+import {db} from '../lib/supabase';
 type Customer={id:string;name:string;inn:string|null};
 type Order={id:string;customer_id:string;site_id:string|null;order_number:string;price:number;status:string};
 type Trip={id:string;customer_id:string|null;order_id:string|null;trip_number:string;trip_date:string|null;waybill_number:string|null;service_name:string|null;unit_price:number|null;volume:number|null;ticket_number:string|null;site_id:string|null};
@@ -39,3 +38,4 @@ export function AccountingDocuments(){
  <details style={{marginTop:14}}><summary>Реквизиты организации для печати</summary><div className="form">{([['name','Организация'],['inn','ИНН'],['kpp','КПП'],['address','Адрес'],['bank','Банк'],['bik','БИК'],['account','Расчётный счёт']] as const).map(([k,v])=>field(k,v))}</div><p className="muted">Реквизиты сохраняются только в этом браузере. Не используйте общий компьютер.</p></details>
  <div className="actions" style={{marginTop:18}}><button className="button" onClick={print} disabled={kind==='invoice'&&!chosenInvoice}>Печать / PDF</button><button className="button secondary" onClick={excel} disabled={kind==='invoice'&&!chosenInvoice}>Скачать Excel</button></div><div className="form" style={{marginTop:16}}><label className="field">Email получателя<input type="email" value={email} onChange={e=>setEmail(e.target.value)}/></label><button className="button secondary" onClick={prepareEmail}>Подготовить письмо</button></div><p className="muted">Автоматическая отправка файлов требует подключения SMTP/API почтового сервиса. Сейчас открывается письмо без вложения — скачанный файл нужно прикрепить вручную.</p></section>
 }
+
