@@ -9,7 +9,7 @@ select set_config('request.jwt.claim.sub','00000000-0000-4000-8000-000000000071'
 select set_config('request.jwt.claims','{"sub":"00000000-0000-4000-8000-000000000071","role":"authenticated"}',true);
 set local role authenticated;
 do $$
-declare c uuid;s uuid;d uuid;t1 uuid;t2 uuid;i uuid;u uuid;a uuid;f uuid;v numeric;n integer;
+declare c uuid;s uuid;d uuid;t1 uuid;t2 uuid;i uuid;u uuid;a uuid;f uuid;c_plain uuid;s_plain uuid;t_plain uuid;t_prior uuid;v numeric;n integer;
 begin
  insert into public.crm_customers(name) values('Тестовый заказчик бухгалтерии') returning id into c;
  insert into public.crm_sites(customer_id,name,loading_address,unloading_address,route_km) values(c,'Тестовый объект','Погрузка','Разгрузка',100) returning id into s;
@@ -72,6 +72,15 @@ begin
   raise exception using message='TEST: архивирование заказчика со счётом должно быть заблокировано',errcode='P0002';
  exception when sqlstate 'P0001' then null;end;
  if exists(select 1 from public.crm_customers where id=c and (is_archived or deleted_at is not null)) or exists(select 1 from public.crm_trips where id=t1 and deleted_at is not null) then raise exception 'TEST: частичное архивирование';end if;
+ insert into public.crm_customers(name) values('Заказчик для проверки архива') returning id into c_plain;
+ insert into public.crm_sites(customer_id,name,loading_address,unloading_address,route_km) values(c_plain,'Объект архива','А','Б',10) returning id into s_plain;
+ insert into public.crm_trips(customer_id,site_id,driver_id,trip_number,trip_date,status) values(c_plain,s_plain,d,'АРХИВ-НОВЫЙ','2026-10-10','sent') returning id into t_plain;
+ insert into public.crm_trips(customer_id,site_id,driver_id,trip_number,trip_date,status,deleted_at) values(c_plain,s_plain,d,'АРХИВ-СТАРЫЙ','2026-10-10','sent','2026-01-01') returning id into t_prior;
+ perform public.crm_archive_customer(c_plain,false);
+ if not exists(select 1 from public.crm_customers where id=c_plain and is_archived and deleted_at is not null) or not exists(select 1 from public.crm_trips where id=t_plain and deleted_at is not null) then raise exception 'TEST: архив не охватил прямой рейс';end if;
+ perform public.crm_archive_customer(c_plain,true);
+ if not exists(select 1 from public.crm_customers where id=c_plain and not is_archived and deleted_at is null) or not exists(select 1 from public.crm_trips where id=t_plain and deleted_at is null) then raise exception 'TEST: восстановление связанных данных не выполнено';end if;
+ if not exists(select 1 from public.crm_trips where id=t_prior and deleted_at='2026-01-01'::timestamptz) then raise exception 'TEST: восстановлен независимый старый архив';end if;
  -- RLS: другой вошедший пользователь не видит и не изменяет документы первого.
  perform set_config('request.jwt.claim.sub','00000000-0000-4000-8000-000000000072',true);
  perform set_config('request.jwt.claims','{"sub":"00000000-0000-4000-8000-000000000072","role":"authenticated"}',true);
