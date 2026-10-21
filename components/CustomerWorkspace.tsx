@@ -12,7 +12,28 @@ const number=(prefix:string)=>prefix+'-'+new Date().getFullYear()+'-'+String(Dat
 export function CustomerWorkspace(){
 const [customers,setCustomers]=useState<Customer[]>([]),[contracts,setContracts]=useState<Contract[]>([]),[specs,setSpecs]=useState<Spec[]>([]),[sites,setSites]=useState<Site[]>([]);
 const [selected,setSelected]=useState(''),[step,setStep]=useState(0),[form,setForm]=useState<Record<string,string>>({}),[busy,setBusy]=useState(false),[error,setError]=useState(''),[lookup,setLookup]=useState(''),[tab,setTab]=useState<'overview'|'contracts'|'specs'|'sites'>('overview'),[filter,setFilter]=useState('');
+const [marked,setMarked]=useState<string[]>([]);
+const [toast,setToast]=useState('');
+useEffect(()=>{if(!toast)return;const timer=setTimeout(()=>setToast(''),10000);return()=>clearTimeout(timer)},[toast]);
 const current=customers.find(c=>c.id===selected);
+function toggle(id:string){setMarked(prev=>prev.includes(id)?prev.filter(x=>x!==id):[...prev,id])}
+async function removeSelected(){
+ if(!marked.length)return;
+ if(!window.confirm('Удалить выбранных заказчиков: '+marked.length+'?'))return;
+ setBusy(true);setError('');
+ let count=0;const failures:string[]=[];
+ for(const id of marked){
+  const result=await db.from('crm_customers').delete().eq('id',id).select('id');
+  if(result.error)failures.push(result.error.message);
+  else if(result.data?.length)count++;
+ }
+ setBusy(false);setMarked([]);
+ if(marked.includes(selected))setSelected('');
+ await load();
+ if(count)setToast('Удалено заказчиков: '+count);
+ if(failures.length)setError('Не все записи удалены: '+failures.join('; '));
+}
+
 async function load(){const [a,b,c,d]=await Promise.all([db.from('crm_customers').select('id,name,inn,phone,email').order('created_at',{ascending:false}),db.from('crm_contracts').select('id,customer_id,contract_number,contract_type,contract_date').order('created_at',{ascending:false}),db.from('crm_specifications').select('id,contract_id,specification_number,service_name,rate,unit').order('created_at',{ascending:false}),db.from('crm_sites').select('id,customer_id,contract_id,specification_id,name,loading_address,unloading_address,route_km').order('created_at',{ascending:false})]);const err=a.error??b.error??c.error??d.error;if(err)setError(err.message);else{setCustomers(a.data??[]);setContracts(b.data??[]);setSpecs(c.data??[]);setSites(d.data??[])}}
 useEffect(()=>{void load()},[]);
 const update=(k:string,v:string)=>setForm(p=>({...p,[k]:v}));
@@ -32,7 +53,9 @@ if(step===4){const r=await db.from('crm_sites').insert({customer_id:selected,con
 const input=(label:string,k:string,required=false,type='text')=><label className="field">{label}<input required={required} type={type} value={form[k]??''} onChange={e=>update(k,e.target.value)}/></label>;
 const dropdown=(label:string,k:string,rows:{id:string;label:string}[])=><label className="field">{label}<select required value={form[k]??''} onChange={e=>update(k,e.target.value)}>{rows.map(x=><option key={x.id} value={x.id}>{x.label}</option>)}</select></label>;
 return <div className="customer-workspace"><div className="heading"><div><h2>Заказчики · {customers.length}</h2><p className="muted">Единая карточка: реквизиты → договор → спецификация → объект</p></div><button className="button" onClick={start}>+ Создать заказчика</button></div>{error&&<div className="notice">{error}</div>}
-<div className="customer-layout"><aside className="panel customer-list"><label className="search" style={{width:'100%'}}><Search size={16}/><input placeholder="Компания или ИНН" value={filter} onChange={e=>setFilter(e.target.value)}/></label>{customers.filter(c=>(c.name+' '+(c.inn??'')).toLowerCase().includes(filter.toLowerCase())).map(c=><button key={c.id} className={'customer-item '+(selected===c.id?'chosen':'')} onClick={()=>{setSelected(c.id);setStep(0);setTab('overview')}}><Building2 size={19}/><span><strong>{c.name}</strong><small>ИНН {c.inn||'не указан'}</small></span><ChevronRight size={16}/></button>)}</aside>
+{toast&&<div role="status" className="customer-toast">{toast}</div>}
+{marked.length>0&&<div className="customer-selection"><span>Выбрано: {marked.length}</span><button type="button" className="button secondary" onClick={()=>setMarked([])}>Снять выделение</button><button type="button" className="button" disabled={busy} onClick={()=>void removeSelected()}>Удалить выбранных</button></div>}
+<div className="customer-layout"><aside className="panel customer-list"><label className="search" style={{width:'100%'}}><Search size={16}/><input placeholder="Компания или ИНН" value={filter} onChange={e=>setFilter(e.target.value)}/></label>{customers.filter(c=>(c.name+' '+(c.inn??'')).toLowerCase().includes(filter.toLowerCase())).map(c=><div key={c.id} className="customer-select-row"><input type="checkbox" aria-label={'Выбрать '+c.name} checked={marked.includes(c.id)} onChange={()=>toggle(c.id)}/><button className={'customer-item '+(selected===c.id?'chosen':'')} onClick={()=>{setSelected(c.id);setStep(0);setTab('overview')}}><Building2 size={19}/><span><strong>{c.name}</strong><small>ИНН {c.inn||'не указан'}</small></span><ChevronRight size={16}/></button></div>)}</aside>
 <section className="panel customer-detail">{current?<><div className="customer-profile"><span className="customer-avatar"><Building2 size={28}/></span><div style={{flex:1}}><h2 style={{fontSize:21,margin:'0 0 5px',textTransform:'none'}}>{current.name}</h2><p className="muted">ИНН {current.inn||'—'} · {current.phone||'Телефон не указан'}</p></div><button className="button secondary" onClick={()=>editCustomer(current)}>Изменить</button></div><div className="customer-tabs">{([['overview','Карточка'],['contracts','Договоры'],['specs','Спецификации'],['sites','Объекты']] as const).map(([id,label])=><button className={tab===id?'chosen':''} onClick={()=>setTab(id)} key={id}>{label} <small>{id==='contracts'?cc.length:id==='specs'?ss.length:id==='sites'?st.length:''}</small></button>)}</div>
 {tab==='overview'&&<><div className="customer-metrics"><div><strong>{cc.length}</strong><small>Договоры</small></div><div><strong>{ss.length}</strong><small>Спецификации</small></div><div><strong>{st.length}</strong><small>Объекты</small></div></div><p>Контакты: {current.phone||'—'} · {current.email||'—'}</p><button className="button" onClick={startContract}>+ Новый договор</button></>}
 {tab==='contracts'&&<><button className="button" onClick={startContract}>+ Договор</button>{cc.map(c=><div className="customer-record" key={c.id}><FileText size={20}/><div><strong>{c.contract_number}</strong><small>{c.contract_type==='supply'?'Договор поставки':'Транспортные услуги'} · {c.contract_date||'Дата не указана'}</small></div><button className="button secondary" onClick={()=>startSpec(c.id)}>+ Спецификация</button></div>)}</>}
