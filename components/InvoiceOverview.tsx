@@ -1,0 +1,9 @@
+'use client';
+import {useEffect,useState} from 'react';
+import {createClient} from '@supabase/supabase-js';
+const db=createClient('https://yoqejkedmksmvbqagqru.supabase.co','sb_publishable_qnb1bLiXSsB-9VuwFMtCiQ_07nL4hyQ');
+export function InvoiceOverview(){const [invoices,setInvoices]=useState<{id:string;invoice_number:string;amount:number}[]>([]),[payments,setPayments]=useState<{invoice_id:string;amount:number}[]>([]);
+useEffect(()=>{void (async()=>{const [i,p]=await Promise.all([db.from('crm_invoices').select('id,invoice_number,amount').is('deleted_at',null),db.from('crm_invoice_payments').select('invoice_id,amount')]);if(!i.error&&!p.error){setInvoices(i.data??[]);setPayments(p.data??[])}})()},[]);
+const paid=(id:string)=>payments.filter(p=>p.invoice_id===id).reduce((a,p)=>a+Number(p.amount),0);
+const total=invoices.reduce((a,i)=>a+Number(i.amount),0),received=invoices.reduce((a,i)=>a+paid(i.id),0);
+return <section className="panel"><h2>Счета и оплаты</h2><div className="cards"><div className="card"><div className="metric">{total.toLocaleString('ru-RU')} ₽</div><div className="metric-title">Выставлено</div></div><div className="card"><div className="metric">{received.toLocaleString('ru-RU')} ₽</div><div className="metric-title">Оплачено</div></div><div className="card"><div className="metric">{Math.max(0,total-received).toLocaleString('ru-RU')} ₽</div><div className="metric-title">Остаток</div></div></div><div className="tablewrap"><table><thead><tr><th>Счёт</th><th>Сумма</th><th>Оплачено</th><th>Статус</th></tr></thead><tbody>{invoices.slice(0,8).map(i=>{const p=paid(i.id);return <tr key={i.id} style={{background:p>=Number(i.amount)?'#e8f8ec':p>0?'#fff5dc':'#ffeded'}}><td>{i.invoice_number}</td><td>{Number(i.amount).toLocaleString('ru-RU')} ₽</td><td>{p.toLocaleString('ru-RU')} ₽</td><td>{p>=Number(i.amount)?'Оплачен':p>0?'Частично оплачен':'Не оплачен'}</td></tr>})}</tbody></table></div></section>}
