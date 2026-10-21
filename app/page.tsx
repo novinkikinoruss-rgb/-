@@ -7,7 +7,6 @@ import {Finance} from '../components/Finance';
 import {Documents} from '../components/Documents';
 import {FleetOperations} from '../components/FleetOperations';
 import {Sites} from '../components/Sites';
-import {Contracts} from '../components/Contracts';
 import {DriverPayroll} from '../components/DriverPayroll';
 import {createClient, type User} from '@supabase/supabase-js';
 import {LayoutDashboard,Building2,Truck,Users,Route,ClipboardList,Wallet,FileText,BarChart3,LogOut,Search,Plus,Menu,MapPin,FileCheck2,PackageCheck,Fuel,Wrench,UserRound,ReceiptText,FolderOpen,ChartNoAxesCombined,ListChecks,Send,ContactRound,Trash2} from 'lucide-react';
@@ -17,7 +16,7 @@ type Site={id:string;customer_id:string;name:string;loading_address:string;unloa
 type Order={id:string;site_id:string|null;order_number:string;customer_id:string;origin:string;destination:string;cargo:string|null;price:number;cost:number;status:string};
 type Task={id:string;title:string;done:boolean;due_at:string|null;order_id:string|null};
 const fmt=(n:number)=>new Intl.NumberFormat('ru-RU',{style:'currency',currency:'RUB',maximumFractionDigits:0}).format(n);
-const nav=[['Главная',LayoutDashboard],['Заказчики',Building2],['Объекты',MapPin],['Договоры',FileCheck2],['Перевозчики',ContactRound],['Заявки',ClipboardList],['Рейсы',Route],['Распределение',Send],['Рейсы водителей',PackageCheck],['Автопарк',Truck],['ГСМ',Fuel],['ТО и ремонты',Wrench],['Водители',UserRound],['Зарплата и штрафы',Wallet],['Бухгалтерия',ReceiptText],['Документы',FolderOpen],['Аналитика',ChartNoAxesCombined],['Задачи',ListChecks],['Удалённые данные',Trash2]] as const;
+const nav=[['Главная',LayoutDashboard],['Заказчики',Building2],['Объекты',MapPin],['Перевозчики',ContactRound],['Заявки',ClipboardList],['Рейсы',Route],['Распределение',Send],['Рейсы водителей',PackageCheck],['Автопарк',Truck],['ГСМ',Fuel],['ТО и ремонты',Wrench],['Водители',UserRound],['Зарплата и штрафы',Wallet],['Бухгалтерия',ReceiptText],['Документы',FolderOpen],['Аналитика',ChartNoAxesCombined],['Задачи',ListChecks],['Удалённые данные',Trash2]] as const;
 export default function Home(){
 const [user,setUser]=useState<User|null>(null),[ready,setReady]=useState(false),[email,setEmail]=useState(''),[password,setPassword]=useState(''),[authMode,setAuthMode]=useState<'login'|'register'>('login');
 const [page,setPage]=useState('Главная'),[customers,setCustomers]=useState<Customer[]>([]),[orders,setOrders]=useState<Order[]>([]),[tasks,setTasks]=useState<Task[]>([]);
@@ -65,7 +64,7 @@ return <div className="shell"><aside className={'side '+(mobile?'open ':'')+(nav
 {page==='Бухгалтерия'&&<Finance/>}
 {page==='Документы'&&<Documents/>}
 {page==='Объекты'&&<Sites/>}
-{page==='Договоры'&&<Contracts/>}
+
 {page==='Зарплата и штрафы'&&<DriverPayroll/>}
 {page==='ГСМ'&&<FleetOperations kind="fuel"/>}
 {page==='ТО и ремонты'&&<FleetOperations kind="maintenance"/>}
