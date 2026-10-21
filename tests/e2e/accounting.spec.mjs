@@ -1,7 +1,9 @@
 import {test,expect} from '@playwright/test';
+test.afterEach(async({page},info)=>{if(info.status!==info.expectedStatus)console.log('CRM_FAILED_PAGE_TEXT: '+(await page.locator('body').innerText()).slice(0,9000))});
 const today=new Date().toISOString().slice(0,10),start=today.slice(0,7)+'-01';
 const previous=new Date(new Date(start).getTime()-86400000).toISOString().slice(0,10);
 async function setup(page,{billed=false,oldInvoice=false}={}){
+ page.on('pageerror',error=>console.log('CRM_BROWSER_ERROR: '+error.message));
  const tables={
   crm_customers:[{id:'customer',name:'Тестовый заказчик',inn:'1234567890',kpp:'123456789',legal_address:'Адрес заказчика'}],
   crm_sites:[{id:'site',customer_id:'customer',contract_id:'contract',specification_id:'spec',name:'Тестовый объект',loading_address:'Погрузка',unloading_address:'Разгрузка',route_km:100}],
