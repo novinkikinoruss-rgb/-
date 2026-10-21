@@ -11,7 +11,7 @@ import {Sites} from '../components/Sites';
 import {DriverPayroll} from '../components/DriverPayroll';
 import {createClient, type User} from '@supabase/supabase-js';
 import {LayoutDashboard,Building2,Truck,Users,Route,ClipboardList,Wallet,FileText,BarChart3,LogOut,Search,Plus,Menu,MapPin,FileCheck2,PackageCheck,Fuel,Wrench,UserRound,ReceiptText,FolderOpen,ChartNoAxesCombined,ListChecks,Send,ContactRound,Trash2} from 'lucide-react';
-const supabase=createClient('https://yoqejkedmksmvbqagqru.supabase.co','sb_publishable_qnb1bLiXSsB-9VuwFMtCiQ_07nL4hyQ');
+const supabase=createClient((typeof window==='undefined'?'https://transport-crm-ij9v.onrender.com':window.location.origin)+'/supabase','sb_publishable_qnb1bLiXSsB-9VuwFMtCiQ_07nL4hyQ');
 type Customer={id:string;name:string;inn:string|null;phone:string|null;email:string|null};
 type Site={id:string;customer_id:string;name:string;loading_address:string;unloading_address:string;route_km:number|null};
 type Order={id:string;site_id:string|null;order_number:string;customer_id:string;origin:string;destination:string;cargo:string|null;price:number;cost:number;status:string};
