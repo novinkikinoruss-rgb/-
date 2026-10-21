@@ -2,7 +2,7 @@
 import {useEffect,useState} from 'react';
 import {AccountingDocuments} from './AccountingDocuments';
 import {createClient} from '@supabase/supabase-js';
-const db=createClient('https://yoqejkedmksmvbqagqru.supabase.co','sb_publishable_qnb1bLiXSsB-9VuwFMtCiQ_07nL4hyQ');
+const db=createClient((typeof window==='undefined'?'https://transport-crm-ij9v.onrender.com':window.location.origin)+'/supabase','sb_publishable_qnb1bLiXSsB-9VuwFMtCiQ_07nL4hyQ');
 type Entry={id:string;order_id:string|null;entry_type:'income'|'expense';category:string;amount:number;note:string|null;entry_date:string};
 type Trip={id:string;order_number:string;price:number;cost:number;status:string};
 const money=(n:number)=>new Intl.NumberFormat('ru-RU',{style:'currency',currency:'RUB',maximumFractionDigits:2}).format(n);
