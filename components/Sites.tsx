@@ -6,7 +6,7 @@ type Customer={id:string;name:string};
 type Site={id:string;customer_id:string;name:string;loading_address:string;unloading_address:string;route_km:number|null};
 export function Sites(){
  const [customers,setCustomers]=useState<Customer[]>([]),[rows,setRows]=useState<Site[]>([]),[error,setError]=useState(''),[form,setForm]=useState<Record<string,string>>({}),[open,setOpen]=useState(false),[busy,setBusy]=useState(false),[editId,setEditId]=useState<string|null>(null);
- async function load(){const [c,s]=await Promise.all([db.from('crm_customers').select('id,name').order('name'),db.from('crm_sites').select('*').order('created_at',{ascending:false})]);if(c.error||s.error)setError(c.error?.message??s.error?.message??'Ошибка');else{setCustomers(c.data??[]);setRows(s.data??[])}}
+ async function load(){const [c,s]=await Promise.all([db.from('crm_customers').select('id,name').order('name'),db.from('crm_sites').select('*').is('deleted_at',null).order('created_at',{ascending:false})]);if(c.error||s.error)setError(c.error?.message??s.error?.message??'Ошибка');else{setCustomers(c.data??[]);setRows(s.data??[])}}
  useEffect(()=>{void load()},[]);
  const change=(k:string,v:string)=>setForm(p=>({...p,[k]:v}));
  async function save(e:React.FormEvent){e.preventDefault();setBusy(true);setError('');const payload={customer_id:form.customer_id,name:form.name?.trim(),loading_address:form.loading_address?.trim(),unloading_address:form.unloading_address?.trim(),route_km:form.route_km?Number(form.route_km):null};const r=editId?await db.from('crm_sites').update(payload).eq('id',editId):await db.from('crm_sites').insert(payload);setBusy(false);if(r.error){setError(r.error.message);return}setOpen(false);await load()}
