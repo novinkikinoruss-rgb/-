@@ -1,7 +1,7 @@
 'use client';
 import {useEffect,useState} from 'react';
 import {createClient} from '@supabase/supabase-js';
-const db=createClient('https://yoqejkedmksmvbqagqru.supabase.co','sb_publishable_qnb1bLiXSsB-9VuwFMtCiQ_07nL4hyQ');
+const db=createClient((typeof window==='undefined'?'https://transport-crm-ij9v.onrender.com':window.location.origin)+'/supabase','sb_publishable_qnb1bLiXSsB-9VuwFMtCiQ_07nL4hyQ');
 type Vehicle={id:string;plate:string;brand:string;odometer_km:number;fuel_norm_l100:number|null};
 type Fuel={id:string;vehicle_id:string;entry_date:string;liters:number;amount:number;odometer_km:number|null;station:string|null;notes:string|null};
 type Repair={id:string;vehicle_id:string;service_date:string;service_type:string;odometer_km:number|null;next_service_km:number|null;cost:number;notes:string|null};
