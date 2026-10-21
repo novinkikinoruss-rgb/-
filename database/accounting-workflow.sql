@@ -91,8 +91,12 @@ begin
   if a.id is null or f.id is null or f.paid or f.driver_id<>a.driver_id or new.deduction_date<a.accrual_date or new.deduction_date<f.fine_date then raise exception 'Проверьте водителя, дату, начисление и неоплаченный штраф';end if;
   if (select coalesce(sum(amount),0) from public.crm_payroll_deductions where fine_id=f.id)+new.amount>f.amount then raise exception 'Этот штраф уже удержан';end if;
   if (select coalesce(sum(amount),0) from public.crm_payroll_deductions where accrual_id=a.id)+new.amount+(select coalesce(sum(amount),0) from public.crm_payroll_payments where accrual_id=a.id and kind='salary')>a.base+a.bonus then raise exception 'Удержание превышает остаток зарплаты';end if;
- elsif tg_table_name='crm_payroll_accruals' and new.active then
-  select * into t from public.crm_trips where id=new.trip_id and owner_id=auth.uid() and deleted_at is null;
+ elsif tg_table_name='crm_payroll_accruals' then
+  select * into t from public.crm_trips where id=new.trip_id and owner_id=auth.uid();
+  if not new.active then
+   if t.id is null or (t.status='delivered' and t.deleted_at is null) or exists(select 1 from public.crm_payroll_payments where accrual_id=new.id) or exists(select 1 from public.crm_payroll_deductions where accrual_id=new.id) then raise exception 'Нельзя скрыть действующее, оплаченное или удержанное начисление';end if;
+   return new;
+  end if;
   if t.order_id is not null then select * into o from public.crm_orders where id=t.order_id and owner_id=auth.uid(); end if;
   select * into s from public.crm_sites where id=new.site_id and owner_id=auth.uid();
   if t.id is null or t.status<>'delivered' or t.driver_id is distinct from new.driver_id or coalesce(t.customer_id,o.customer_id) is distinct from new.customer_id or coalesce(t.site_id,o.site_id) is distinct from new.site_id or s.customer_id is distinct from new.customer_id or not exists(select 1 from public.crm_drivers where id=new.driver_id and owner_id=auth.uid()) then raise exception 'Начисление должно соответствовать выполненному рейсу и его владельцу'; end if;
@@ -290,7 +294,7 @@ revoke all on function public.crm_create_invoice_from_trips(uuid,uuid,uuid[],tex
 grant execute on function public.crm_create_invoice_from_trips(uuid,uuid,uuid[],text,date,jsonb),public.crm_create_upd_from_invoice(uuid,text,date),public.crm_record_invoice_payment(uuid,numeric,date),public.crm_pay_driver_accruals(uuid[],text,numeric,date) to authenticated;
 -- Архивирование выполняется атомарно; независимые архивы не восстанавливаются вместе с заказчиком.
 create or replace function public.crm_archive_customer(p_customer_id uuid,p_restore boolean default false) returns void language plpgsql security invoker set search_path=public,pg_temp as $$
-declare v_marker timestamptz;v_orders uuid[];v_contracts uuid[];v_table text;v_column text;v_ids uuid[];
+declare v_marker timestamptz;v_orders uuid[];v_trips uuid[];v_contracts uuid[];v_table text;v_column text;v_ids uuid[];
 begin
  if auth.uid() is null then raise exception 'Требуется авторизация';end if;
  select deleted_at into v_marker from public.crm_customers where id=p_customer_id and owner_id=auth.uid() for update;
@@ -301,12 +305,18 @@ begin
  end if;
  if not p_restore then v_marker=clock_timestamp();end if;
  select coalesce(array_agg(id),'{}'::uuid[]) into v_orders from public.crm_orders where customer_id=p_customer_id and owner_id=auth.uid();
+ select coalesce(array_agg(id),'{}'::uuid[]) into v_trips from public.crm_trips where owner_id=auth.uid() and (customer_id=p_customer_id or order_id=any(v_orders));
  select coalesce(array_agg(id),'{}'::uuid[]) into v_contracts from public.crm_contracts where customer_id=p_customer_id and owner_id=auth.uid();
  foreach v_table in array array['crm_documents','crm_driver_fines','crm_finance_entries','crm_fuel_entries','crm_tasks','crm_trips','crm_contract_rates','crm_specifications','crm_orders','crm_sites','crm_customer_sites','crm_contracts'] loop
   if to_regclass('public.'||v_table) is null then continue;end if;
   if v_table in ('crm_contract_rates','crm_specifications') then v_column='contract_id';v_ids=v_contracts;
   elsif v_table in ('crm_orders','crm_sites','crm_customer_sites','crm_contracts') then v_column='customer_id';v_ids=array[p_customer_id];
   else v_column='order_id';v_ids=v_orders;end if;
+  if v_table in ('crm_documents','crm_finance_entries') then
+   if p_restore then execute format('update public.%I set deleted_at=null where owner_id=$1 and (order_id=any($2) or trip_id=any($4)) and deleted_at=$3',v_table) using auth.uid(),v_orders,v_marker,v_trips;
+   else execute format('update public.%I set deleted_at=$3 where owner_id=$1 and (order_id=any($2) or trip_id=any($4)) and deleted_at is null',v_table) using auth.uid(),v_orders,v_marker,v_trips;end if;
+   continue;
+  end if;
   if p_restore then
    execute format('update public.%I set deleted_at=null where owner_id=$1 and %I=any($2) and deleted_at=$3',v_table,v_column) using auth.uid(),v_ids,v_marker;
   else
