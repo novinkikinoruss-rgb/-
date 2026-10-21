@@ -24,3 +24,8 @@ const settings=await fetch(supabase+'/auth/v1/settings',{headers:{apikey:key},si
 const denied=await fetch(supabase+'/rest/v1/rpc/respectlogistic_read_workspace',{method:'POST',headers:{apikey:key,'Content-Type':'application/json'},body:'{}',signal:AbortSignal.timeout(15000)});
 assert.ok([401,403].includes(denied.status),'Anonymous access to customer data must be denied');
 console.log('Supabase Auth reachable; customer API rejects anonymous reads: OK');
+const proxiedSettings=await get('/supabase/auth/v1/settings',{headers:{apikey:key}});assert.equal(proxiedSettings.status,200);
+const proxiedDenied=await get('/supabase/rest/v1/rpc/respectlogistic_read_workspace',{method:'POST',headers:{apikey:key,'Content-Type':'application/json'},body:'{}'});assert.ok([401,403].includes(proxiedDenied.status));
+const failedLogin=await get('/supabase/auth/v1/token?grant_type=password',{method:'POST',headers:{apikey:key,'Content-Type':'application/json'},body:JSON.stringify({email:`respectlogistic-probe-${Date.now()}@example.invalid`,password:'connectivity-probe-not-an-account'})});
+assert.ok([400,429].includes(failedLogin.status),'Auth proxy must return an authentication response');
+console.log('Same-origin Auth/DB proxy reachable; invalid sign-in returns an error without hanging: OK');

@@ -2,6 +2,7 @@
 import {useEffect,useState,useRef} from 'react';
 import {Activity,CheckCircle2,RefreshCw,Database,Globe,SearchCheck} from 'lucide-react';
 import {db} from '../lib/supabase';
+import {deadline} from '../lib/network';
 type State='checking'|'ok'|'configured'|'error'|'unconfigured'|'login';
 type Health={site:State;database:State;inn:State};
 export function SystemStatus(){
@@ -12,7 +13,7 @@ export function SystemStatus(){
     try{
       let site:State='error',inn:State='error',database:State=db?'error':'unconfigured';
       try{const response=await fetch('/api/health',{cache:'no-store',signal:AbortSignal.timeout(8000)});const data=await response.json();if(response.ok&&data.status==='ok'){site='ok';inn=data.innConfigured?'configured':'unconfigured';}}catch{}
-      if(db)try{const {data,error:authError}=await db.auth.getUser();if(authError||!data.user)database='login';else{const {error}=await db.rpc('respectlogistic_read_workspace');database=error?'error':'ok';}}catch{database='error';}
+      if(db)try{const {data,error:authError}=await deadline(db.auth.getUser(),25000);if(authError)database=authError.name==='AuthSessionMissingError'||[400,401,403].includes(authError.status||0)?'login':'error';else if(!data.user)database='login';else{const {error}=await deadline(db.rpc('respectlogistic_read_workspace'),25000);database=error?'error':'ok';}}catch{database='error';}
       if(mounted.current){setHealth({site,database,inn});setChecked(new Date().toLocaleTimeString('ru-RU',{hour:'2-digit',minute:'2-digit'}));}
     }finally{running.current=false;}
   }

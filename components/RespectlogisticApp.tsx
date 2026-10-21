@@ -4,6 +4,7 @@ import {Building2,LayoutDashboard,MapPin,Truck,Users,Wallet,FolderOpen,ReceiptTe
 import {emptyWorkspace,money,type Workspace,type Customer,type Command,type Document as CustomerDocument} from '../lib/domain';
 import {loadWorkspace,commitCommand,STORAGE_KEY} from '../lib/repository';
 import {db} from '../lib/supabase';
+import {authMessage,deadline} from '../lib/network';
 import {downloadDocument} from '../lib/documents';
 import {CustomerForms,type FormKind} from './CustomerForms';
 import {Notifications,useNotice} from './Notifications';
@@ -37,7 +38,7 @@ function App(){
     return()=>{mounted.current=false;};
   },[]);
   useEffect(()=>{const changed=(event:StorageEvent)=>{if(event.key===STORAGE_KEY)void reload();};window.addEventListener('storage',changed);return()=>window.removeEventListener('storage',changed);},[]);
-  async function authenticate(event:FormEvent){event.preventDefault();if(!db||authBusy)return;setAuthBusy(true);setAuthError('');try{const {error}=await db.auth.signInWithPassword({email,password});if(error)throw error;setPassword('');notify('Вход выполнен');}catch{setAuthError('Не удалось войти. Проверьте email и пароль.');notify('Вход не выполнен','error');}finally{setAuthBusy(false);}}
+  async function authenticate(event:FormEvent){event.preventDefault();if(!db||authBusy)return;setAuthBusy(true);setAuthError('');try{const {data,error}=await deadline(db.auth.signInWithPassword({email:email.trim(),password}),25000);if(error)throw error;if(!data.session)throw new Error('Сессия входа не создана');setPassword('');notify('Вход выполнен');}catch(error){const message=authMessage(error);setAuthError(message);notify(message,'error');}finally{setAuthBusy(false);}}
   const customer=state.customers.find(c=>c.id===selected)||null;
   const customers=state.customers.filter(c=>[c.name,c.inn,c.contactName,c.phone].join(' ').toLowerCase().includes(query.toLowerCase()));
   const contracts=state.contracts.filter(c=>c.customerId===selected),specs=state.specifications.filter(s=>s.customerId===selected),sites=state.sites.filter(s=>s.customerId===selected),documents=state.documents.filter(d=>d.customerId===selected);

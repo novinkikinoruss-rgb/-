@@ -1,9 +1,10 @@
 import {applyCommand,type Command,type Workspace} from './domain';
 import {demoWorkspace} from './demo';
 import {db} from './supabase';
+import {deadline} from './network';
 export const STORAGE_KEY='respectlogistic-preview-v1';
 export async function loadWorkspace():Promise<Workspace>{
-  if(db){const {data,error}=await db.rpc('respectlogistic_read_workspace');if(error)throw new Error('Не удалось загрузить базу: '+error.message);return data as Workspace;}
+  if(db){const {data,error}=await deadline(db.rpc('respectlogistic_read_workspace'),25000,'База данных не ответила вовремя. Повторите загрузку.');if(error)throw new Error('Не удалось загрузить базу: '+error.message);return data as Workspace;}
   const raw=localStorage.getItem(STORAGE_KEY);
   if(!raw){const seed=demoWorkspace();localStorage.setItem(STORAGE_KEY,JSON.stringify(seed));return seed;}
   const parsed=JSON.parse(raw) as Workspace;

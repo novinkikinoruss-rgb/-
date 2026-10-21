@@ -55,3 +55,24 @@ jobs:
       - run: psql -v ON_ERROR_STOP=1 -f tests/database-fixture.sql
       - run: psql -v ON_ERROR_STOP=1 -f database/customers.sql
       - run: psql -v ON_ERROR_STOP=1 -f tests/database.integration.sql
+  authentication:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      NEXT_TELEMETRY_DISABLED: '1'
+      NEXT_PUBLIC_SUPABASE_URL: https://yoqejkedmksmvbqagqru.supabase.co
+      NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: sb_publishable_qnb1bLiXSsB-9VuwFMtCiQ_07nL4hyQ
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: npm ci
+      - run: npm run build
+      - run: npx playwright install --with-deps chromium
+      - run: npx playwright test --config playwright.auth.config.mjs
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: authentication-traces
+          path: test-results/
