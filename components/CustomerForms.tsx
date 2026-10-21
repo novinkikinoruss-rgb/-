@@ -8,7 +8,7 @@ import {Modal} from './Modal';
 export type FormKind='customer'|'contract'|'specification'|'site';
 export function CustomerForms({kind,customer,edit=false,state,onClose,onSaved}:{kind:FormKind;customer:Customer|null;edit?:boolean;state:Workspace;onClose:()=>void;onSaved:(command:Command)=>Promise<void>}){
   const notify=useNotice();const [busy,setBusy]=useState(false),[lookup,setLookup]=useState(false),[error,setError]=useState('');
-  const saving=useRef(false);const innGeneration=useRef(0);
+  const saving=useRef(false);const innGeneration=useRef(0);const lastInn=useRef('');const requestId=useRef(crypto.randomUUID());
   const [company,setCompany]=useState<CustomerInput>(edit&&customer?{...customer}:{...emptyCustomer});
   const today=new Date().toLocaleDateString('en-CA');
   const contracts=state.contracts.filter(c=>c.customerId===customer?.id);
@@ -24,14 +24,15 @@ export function CustomerForms({kind,customer,edit=false,state,onClose,onSaved}:{
   function changeCompany(key:keyof CustomerInput,value:string){if(key==='inn')innGeneration.current++;setCompany(p=>({...p,[key]:value}));}
   async function lookupInn(){
     if(!validInn(company.inn)){setError('Введите корректный ИНН организации: 10 цифр');return;}
-    const generation=++innGeneration.current;setLookup(true);setError('');
+    if(lookup)return;
+    const generation=++innGeneration.current;lastInn.current=company.inn;setLookup(true);setError('');
     try{
       const session=db?await db.auth.getSession():null;
       const response=await fetch('/api/company',{method:'POST',headers:{'Content-Type':'application/json',...(session?.data.session?{Authorization:`Bearer ${session.data.session.access_token}`}:{})},body:JSON.stringify({inn:company.inn}),signal:AbortSignal.timeout(15000)});
-      const result=await response.json();if(!response.ok)throw new Error(result.error||'Не удалось получить реквизиты');
+      const result=await response.json();if(!response.ok){window.dispatchEvent(new CustomEvent('respectlogistic:inn',{detail:response.status===503?'unconfigured':'error'}));throw new Error(result.error||'Не удалось получить реквизиты');}
       if(generation!==innGeneration.current)return;
       setCompany(previous=>({...previous,...result.company}));notify('Реквизиты организации загружены. Проверьте их перед сохранением.');window.dispatchEvent(new CustomEvent('respectlogistic:inn',{detail:'ok'}));
-    }catch(e){const message=e instanceof Error?e.message:'Не удалось загрузить данные';setError(message);notify(message,'error');window.dispatchEvent(new CustomEvent('respectlogistic:inn',{detail:'error'}));}
+    }catch(e){const message=e instanceof Error?e.message:'Не удалось загрузить данные';setError(message);notify(message,'error');}
     finally{setLookup(false);}
   }
   function companyField(label:string,key:keyof CustomerInput,required=false,type='text'){
@@ -40,7 +41,7 @@ export function CustomerForms({kind,customer,edit=false,state,onClose,onSaved}:{
   async function save(event:FormEvent){
     event.preventDefault();if(saving.current)return;saving.current=true;setBusy(true);setError('');
     try{
-      const id=crypto.randomUUID();let command:Command;
+      const id=requestId.current;let command:Command;
       if(kind==='customer')command=edit&&customer?{type:'customer.update',id,customerId:customer.id,data:company}:{type:'customer.create',id,data:company};
       else{
         if(!customer)throw new Error('Сначала создайте заказчика');
@@ -57,7 +58,7 @@ export function CustomerForms({kind,customer,edit=false,state,onClose,onSaved}:{
   return <Modal title={labels[kind]} onClose={onClose} busy={busy||lookup}><form onSubmit={save}><fieldset disabled={busy} className="form-body">
     <div className="form-intro"><span className="soft-icon">{kind==='customer'?<Building2/>:kind==='site'?<MapPin/>:<FileText/>}</span><p>{kind==='customer'?'Заполните реквизиты. После сохранения предложим создать договор.':kind==='contract'?'Номер присвоится при сохранении. Договор появится в папке компании.':kind==='specification'?'Услуги и цены будут доступны при создании объекта и будущих рейсов.':'Укажите маршрут, услугу и ответственного за объект.'}</p></div>
     {kind==='customer'&&<>
-      <section className="form-section"><h3>Компания и реквизиты</h3><div className="inn-lookup"><label className="field">ИНН организации *<input name="inn" inputMode="numeric" placeholder="10 цифр" required maxLength={10} value={company.inn} onChange={e=>changeCompany('inn',e.target.value.replace(/\D/g,''))}/></label><button type="button" className="button secondary" disabled={lookup} onClick={()=>void lookupInn()}>{lookup?<LoaderCircle className="spin" size={16}/>:<SearchCheck size={16}/>}Заполнить по ИНН</button></div><div className="form-grid">{companyField('Краткое название','name',true)}{companyField('Полное наименование','fullName')}{companyField('КПП','kpp')}{companyField('ОГРН','ogrn')}<label className="field wide">Юридический адрес<textarea value={company.legalAddress} maxLength={4000} onChange={e=>changeCompany('legalAddress',e.target.value)}/></label>{companyField('Почтовый адрес','postalAddress')}{companyField('Руководитель','director')}{companyField('Действует на основании','basis')}</div></section>
+      <section className="form-section"><h3>Компания и реквизиты</h3><div className="inn-lookup"><label className="field">ИНН организации *<input name="inn" inputMode="numeric" placeholder="10 цифр" required maxLength={10} value={company.inn} onChange={e=>changeCompany('inn',e.target.value.replace(/\D/g,''))} onBlur={()=>{if(db&&validInn(company.inn)&&lastInn.current!==company.inn)void lookupInn();}}/></label><button type="button" className="button secondary" disabled={lookup} onClick={()=>void lookupInn()}>{lookup?<LoaderCircle className="spin" size={16}/>:<SearchCheck size={16}/>}Заполнить по ИНН</button></div><div className="form-grid">{companyField('Краткое название','name',true)}{companyField('Полное наименование','fullName')}{companyField('КПП','kpp')}{companyField('ОГРН','ogrn')}<label className="field wide">Юридический адрес<textarea value={company.legalAddress} maxLength={4000} onChange={e=>changeCompany('legalAddress',e.target.value)}/></label>{companyField('Почтовый адрес','postalAddress')}{companyField('Руководитель','director')}{companyField('Действует на основании','basis')}</div></section>
       <section className="form-section"><h3>Контакты</h3><div className="form-grid">{companyField('Контактное лицо','contactName')}{companyField('Телефон','phone',false,'tel')}{companyField('Email','email',false,'email')}</div></section>
       <details className="form-section"><summary>Банковские реквизиты и примечания</summary><div className="form-grid">{companyField('Банк','bank')}{companyField('БИК','bik')}{companyField('Расчётный счёт','account')}{companyField('Корреспондентский счёт','correspondent')}<label className="field wide">Примечания<textarea value={company.notes} maxLength={4000} onChange={e=>changeCompany('notes',e.target.value)}/></label></div></details>
     </>}
