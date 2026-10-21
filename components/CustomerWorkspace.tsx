@@ -2,7 +2,7 @@
 import {useEffect,useState} from 'react';
 import {createClient} from '@supabase/supabase-js';
 import {Building2,FileText,Layers,MapPin,ChevronRight,ArrowLeft,Search} from 'lucide-react';
-const db=createClient('https://yoqejkedmksmvbqagqru.supabase.co','sb_publishable_qnb1bLiXSsB-9VuwFMtCiQ_07nL4hyQ');
+const db=createClient((typeof window==='undefined'?'https://transport-crm-ij9v.onrender.com':window.location.origin)+'/supabase','sb_publishable_qnb1bLiXSsB-9VuwFMtCiQ_07nL4hyQ');
 type Customer={id:string;name:string;inn:string|null;phone:string|null;email:string|null};
 type Contract={id:string;customer_id:string|null;contract_number:string;contract_type:string;contract_date:string|null};
 type Spec={id:string;contract_id:string;specification_number:string;service_name:string;rate:number;unit:string};
