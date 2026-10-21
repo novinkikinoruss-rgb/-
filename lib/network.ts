@@ -6,7 +6,7 @@ export async function boundedFetch(input:RequestInfo|URL,init?:RequestInit):Prom
   if(source?.aborted)cancel();else source?.addEventListener('abort',cancel,{once:true});
   const timer=setTimeout(()=>controller.abort(new DOMException('Сервис не ответил вовремя','TimeoutError')),REQUEST_TIMEOUT_MS);
   try{return await fetch(input,{...init,signal:controller.signal});}
-  catch(error){if(controller.signal.aborted&&!source?.aborted)throw new Error('Сервис входа не ответил вовремя. Повторите попытку.');throw error;}
+  catch(error){if(controller.signal.aborted&&!source?.aborted)throw new Error('Сервис не ответил вовремя. Повторите попытку.');throw error;}
   finally{clearTimeout(timer);source?.removeEventListener('abort',cancel);}
 }
 export async function deadline<T>(operation:PromiseLike<T>,milliseconds:number,message='Сервис входа не ответил вовремя. Повторите попытку.'):Promise<T>{

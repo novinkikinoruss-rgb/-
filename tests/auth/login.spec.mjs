@@ -39,3 +39,15 @@ test('Зависший запрос прерывается и можно сра�
  await expect(page.locator('.auth-card').getByRole('alert')).toContainText('не ответил вовремя',{timeout:28000});await expect(page.getByRole('button',{name:'Войти',exact:true})).toBeEnabled();
  await page.evaluate(()=>window.__hangLogin=false);await page.getByRole('button',{name:'Войти',exact:true}).click();await expect(page.getByRole('heading',{name:'Заказчики',exact:true})).toBeVisible();
 });
+test('Зависшая загрузка карточек показывает ошибку и допускает повтор',async({page})=>{
+ await page.addInitScript(()=>{
+  window.__hangCards=true;const original=window.fetch.bind(window);
+  window.fetch=(input,init)=>{
+   if(window.__hangCards&&String(input).includes('/respectlogistic_read_workspace'))return new Promise((_,reject)=>{if(init?.signal?.aborted)reject(new DOMException('Aborted','AbortError'));else init?.signal?.addEventListener('abort',()=>reject(new DOMException('Aborted','AbortError')),{once:true});});
+   return original(input,init);
+  };
+ });
+ await setup(page);await fill(page);await page.getByRole('button',{name:'Войти',exact:true}).click();
+ await expect(page.getByRole('heading',{name:'Данные не загружены',exact:true})).toBeVisible({timeout:28000});
+ await page.evaluate(()=>window.__hangCards=false);await page.getByRole('button',{name:'Повторить загрузку',exact:true}).click();await expect(page.getByText('Добавьте первого заказчика',{exact:true})).toBeVisible();
+});
