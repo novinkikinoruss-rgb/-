@@ -288,6 +288,38 @@ create trigger crm_guard_allocated_fine before update or delete on public.crm_dr
 -- Функции доступны только вошедшим пользователям, выполняются с RLS вызывающего.
 revoke all on function public.crm_create_invoice_from_trips(uuid,uuid,uuid[],text,date,jsonb),public.crm_create_upd_from_invoice(uuid,text,date),public.crm_record_invoice_payment(uuid,numeric,date),public.crm_pay_driver_accruals(uuid[],text,numeric,date) from public,anon;
 grant execute on function public.crm_create_invoice_from_trips(uuid,uuid,uuid[],text,date,jsonb),public.crm_create_upd_from_invoice(uuid,text,date),public.crm_record_invoice_payment(uuid,numeric,date),public.crm_pay_driver_accruals(uuid[],text,numeric,date) to authenticated;
+-- Архивирование выполняется атомарно; независимые архивы не восстанавливаются вместе с заказчиком.
+create or replace function public.crm_archive_customer(p_customer_id uuid,p_restore boolean default false) returns void language plpgsql security invoker set search_path=public,pg_temp as $$
+declare v_marker timestamptz;v_orders uuid[];v_contracts uuid[];v_table text;v_column text;v_ids uuid[];
+begin
+ if auth.uid() is null then raise exception 'Требуется авторизация';end if;
+ select deleted_at into v_marker from public.crm_customers where id=p_customer_id and owner_id=auth.uid() for update;
+ if not found then raise exception 'Заказчик недоступен';end if;
+ if not p_restore and (exists(select 1 from public.crm_invoices where customer_id=p_customer_id and owner_id=auth.uid() and deleted_at is null) or exists(select 1 from public.crm_payroll_accruals where customer_id=p_customer_id and owner_id=auth.uid())) then raise exception 'У заказчика есть счета или начисления зарплаты. Его финансовую историю нельзя архивировать вместе с рабочими данными';end if;
+ if p_restore and v_marker is null then
+  update public.crm_customers set is_archived=false where id=p_customer_id and owner_id=auth.uid();return;
+ end if;
+ if not p_restore then v_marker=clock_timestamp();end if;
+ select coalesce(array_agg(id),'{}'::uuid[]) into v_orders from public.crm_orders where customer_id=p_customer_id and owner_id=auth.uid();
+ select coalesce(array_agg(id),'{}'::uuid[]) into v_contracts from public.crm_contracts where customer_id=p_customer_id and owner_id=auth.uid();
+ foreach v_table in array array['crm_documents','crm_driver_fines','crm_finance_entries','crm_fuel_entries','crm_tasks','crm_trips','crm_contract_rates','crm_specifications','crm_orders','crm_sites','crm_customer_sites','crm_contracts'] loop
+  if to_regclass('public.'||v_table) is null then continue;end if;
+  if v_table in ('crm_contract_rates','crm_specifications') then v_column='contract_id';v_ids=v_contracts;
+  elsif v_table in ('crm_orders','crm_sites','crm_customer_sites','crm_contracts') then v_column='customer_id';v_ids=array[p_customer_id];
+  else v_column='order_id';v_ids=v_orders;end if;
+  if p_restore then
+   execute format('update public.%I set deleted_at=null where owner_id=$1 and %I=any($2) and deleted_at=$3',v_table,v_column) using auth.uid(),v_ids,v_marker;
+  else
+   execute format('update public.%I set deleted_at=$3 where owner_id=$1 and %I=any($2) and deleted_at is null',v_table,v_column) using auth.uid(),v_ids,v_marker;
+  end if;
+ end loop;
+ -- Прямые рейсы без заявки тоже входят в архив заказчика.
+ if p_restore then update public.crm_trips set deleted_at=null where owner_id=auth.uid() and customer_id=p_customer_id and deleted_at=v_marker;
+ else update public.crm_trips set deleted_at=v_marker where owner_id=auth.uid() and customer_id=p_customer_id and deleted_at is null;end if;
+ update public.crm_customers set is_archived=not p_restore,deleted_at=case when p_restore then null else v_marker end where id=p_customer_id and owner_id=auth.uid();
+end $$;
+revoke all on function public.crm_archive_customer(uuid,boolean) from public,anon;
+grant execute on function public.crm_archive_customer(uuid,boolean) to authenticated;
 -- Старые выполненные рейсы намеренно не пересчитываются автоматически: тарифы могли измениться.
 -- Начисления по ним импортируются после отдельной сверки истории.
 notify pgrst,'reload schema';

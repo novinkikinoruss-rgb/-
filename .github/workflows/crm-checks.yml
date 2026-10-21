@@ -20,6 +20,10 @@ jobs:
           node-version: '22'
       - name: Install dependencies
         run: npm ci
+      - name: Dependency audit report
+        run: |
+          npm audit --json > npm-audit.json || true
+          node -e "const a=require('./npm-audit.json');console.log('CRM_AUDIT='+JSON.stringify(Object.values(a.vulnerabilities||{}).map(v=>({name:v.name,severity:v.severity,direct:v.isDirect,via:v.via,fix:v.fixAvailable}))))"
       - name: Calculation tests
         run: npm test
       - name: TypeScript

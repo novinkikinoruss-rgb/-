@@ -67,6 +67,11 @@ begin
  if not exists(select 1 from public.crm_payroll_accruals where id=a and base=7000 and bonus=700 and tax=2310) then raise exception 'TEST: прошлое начисление изменилось';end if;
  select count(*) into n from public.crm_payroll_accruals where trip_id in (t1,t2);
  if n<>2 then raise exception 'TEST: повторная обработка создала дубли начислений';end if;
+ begin
+  perform public.crm_archive_customer(c,false);
+  raise exception using message='TEST: архивирование заказчика со счётом должно быть заблокировано',errcode='P0002';
+ exception when sqlstate 'P0001' then null;end;
+ if exists(select 1 from public.crm_customers where id=c and (is_archived or deleted_at is not null)) or exists(select 1 from public.crm_trips where id=t1 and deleted_at is not null) then raise exception 'TEST: частичное архивирование';end if;
  -- RLS: другой вошедший пользователь не видит и не изменяет документы первого.
  perform set_config('request.jwt.claim.sub','00000000-0000-4000-8000-000000000072',true);
  perform set_config('request.jwt.claims','{"sub":"00000000-0000-4000-8000-000000000072","role":"authenticated"}',true);

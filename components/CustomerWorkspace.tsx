@@ -23,23 +23,9 @@ useEffect(()=>{if(!toast)return;const timer=setTimeout(()=>setToast(''),10000);r
 const current=customers.find(c=>c.id===selected);
 function toggle(id:string){setMarked(prev=>prev.includes(id)?prev.filter(x=>x!==id):[...prev,id])}
 async function archiveRelations(id:string,restore=false){
- const value=restore?null:new Date().toISOString();
- const customerContracts=contracts.filter(c=>c.customer_id===id).map(c=>c.id);
- const customerOrders=await db.from('crm_orders').select('id').eq('customer_id',id);
- if(customerOrders.error)throw customerOrders.error;
- const ids=(customerOrders.data??[]).map(x=>x.id);
- const update=async(table:string,column:string,values:string[])=>{
-  if(!values.length)return;
-  let q=db.from(table).update({deleted_at:value}).in(column,values);
-  if(!restore)q=q.is('deleted_at',null);
-  const r=await q;if(r.error)throw r.error;
- };
- for(const t of ['crm_documents','crm_driver_fines','crm_finance_entries','crm_fuel_entries','crm_tasks','crm_trips'])await update(t,'order_id',ids);
- await update('crm_contract_rates','contract_id',customerContracts);
- await update('crm_specifications','contract_id',customerContracts);
- for(const t of ['crm_orders','crm_sites','crm_customer_sites','crm_contracts'])await update(t,'customer_id',[id]);
- const result=await db.from('crm_customers').update({deleted_at:value,is_archived:!restore}).eq('id',id);
+ const result=await db.rpc('crm_archive_customer',{p_customer_id:id,p_restore:restore});
  if(result.error)throw result.error;
+ window.dispatchEvent(new Event('crm-data-changed'));
 }
 async function restoreRecord(table:'crm_trips'|'crm_documents',id:string){if(!window.confirm('Восстановить запись?'))return;setBusy(true);setError('');const r=await db.from(table).update({deleted_at:null}).eq('id',id).select('id');setBusy(false);if(r.error||!r.data?.length){setError(r.error?.message??'Не удалось восстановить запись');return}await load();setToast('Запись восстановлена')}
 async function restoreCustomer(id:string){

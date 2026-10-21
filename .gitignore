@@ -6,3 +6,7 @@ dist/
 
 /playwright-report/
 /test-results/
+
+.next/
+*.tsbuildinfo
+npm-audit.json

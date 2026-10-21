@@ -64,7 +64,7 @@ test('Счёт заполняется по рейсу и отображаетс�
  await expect(page.getByRole('cell',{name:'2.5',exact:true})).toBeVisible();
  await page.getByLabel('Номер счёта',{exact:true}).fill('СЧ-НОВЫЙ');
  await page.getByRole('button',{name:'Сохранить счёт и реестр',exact:true}).click();
- await expect(page.getByRole('status')).toContainText('Счёт и реестр сохранены');
+ await expect(page.getByRole('status').filter({hasText:'Счёт и реестр сохранены'})).toContainText('Счёт и реестр сохранены');
  expect(calls.find(c=>c.rpc==='crm_create_invoice_from_trips').body.p_trip_ids).toEqual(['trip']);
  await page.getByRole('button',{name:'Рейсы',exact:true}).click();
  await expect(page.getByText('Счёт СЧ-НОВЫЙ',{exact:true})).toBeVisible();
@@ -77,7 +77,7 @@ test('УПД берёт строки выбранного счёта и появ
  await expect(page.getByRole('cell',{name:'Перевозка',exact:true})).toBeVisible();
  await page.getByLabel('Номер УПД',{exact:true}).fill('УПД-ТЕСТ');
  await page.getByRole('button',{name:'Сформировать УПД по счёту',exact:true}).click();
- await expect(page.getByRole('status')).toContainText('УПД сохранён');
+ await expect(page.getByRole('status').filter({hasText:'УПД сохранён'})).toContainText('УПД сохранён');
  expect(calls.find(c=>c.rpc==='crm_create_upd_from_invoice').body.p_invoice_id).toBe('invoice');
  await page.getByRole('button',{name:'Рейсы',exact:true}).click();
  await expect(page.getByText('УПД УПД-ТЕСТ',{exact:false})).toBeVisible();
@@ -94,6 +94,6 @@ test('Штраф уменьшает оставшуюся зарплату и и�
  await page.getByLabel('Водитель',{exact:true}).selectOption('driver');
  await expect(page.getByRole('button',{name:'Учесть штрафы в зарплате',exact:true})).toBeVisible();
  await page.getByRole('button',{name:'Учесть штрафы в зарплате',exact:true}).click();
- await expect(page.getByRole('status')).toContainText('Удержания штрафов сохранены');
+ await expect(page.getByRole('status').filter({hasText:'Удержания штрафов сохранены'})).toContainText('Удержания штрафов сохранены');
  await expect(page.getByRole('button',{name:'Учесть штрафы в зарплате',exact:true})).toHaveCount(0);
 });
