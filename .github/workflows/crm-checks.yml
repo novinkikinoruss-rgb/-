@@ -1,0 +1,63 @@
+name: CRM checks
+on:
+  push:
+    branches: ['codex/accounting-workflow']
+  pull_request:
+    branches: [main]
+permissions:
+  contents: read
+concurrency:
+  group: crm-checks-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  next:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      NEXT_TELEMETRY_DISABLED: '1'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install dependencies
+        run: npm install
+      - name: Calculation tests
+        run: npm test
+      - name: TypeScript
+        run: npm run lint
+      - name: Next.js production build
+        run: npm run build
+      - name: Save resolved dependency versions
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: crm-package-lock
+          path: package-lock.json
+  accounting-sql:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: crm_test
+          POSTGRES_DB: crm_test
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U postgres -d crm_test"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      PGPASSWORD: crm_test
+      PGHOST: localhost
+      PGUSER: postgres
+      PGDATABASE: crm_test
+    steps:
+      - uses: actions/checkout@v4
+      - name: Prepare isolated CRM fixture
+        run: psql -v ON_ERROR_STOP=1 -f tests/fixtures/accounting-base.sql
+      - name: Install accounting schema
+        run: psql -v ON_ERROR_STOP=1 -f database/accounting-workflow.sql
+      - name: Check accounting transactions and access isolation
+        run: psql -v ON_ERROR_STOP=1 -f tests/accounting.integration.sql
