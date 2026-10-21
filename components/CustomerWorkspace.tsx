@@ -19,22 +19,22 @@ const current=customers.find(c=>c.id===selected);
 function toggle(id:string){setMarked(prev=>prev.includes(id)?prev.filter(x=>x!==id):[...prev,id])}
 async function removeSelected(){
  if(!marked.length)return;
- if(!window.confirm('Удалить выбранных заказчиков: '+marked.length+'?'))return;
+ if(!window.confirm('Убрать выбранных заказчиков из активного списка: '+marked.length+'? Связанные заявки и договоры сохранятся в истории.'))return;
  setBusy(true);setError('');
  let count=0;const failures:string[]=[];
  for(const id of marked){
-  const result=await db.from('crm_customers').delete().eq('id',id).select('id');
+  const result=await db.from('crm_customers').update({is_archived:true}).eq('id',id).select('id');
   if(result.error)failures.push(result.error.message);
   else if(result.data?.length)count++;
  }
  setBusy(false);setMarked([]);
  if(marked.includes(selected))setSelected('');
  await load();
- if(count)setToast('Удалено заказчиков: '+count);
+ if(count)setToast('Заказчики убраны из списка: '+count+' (документы сохранены)');
  if(failures.length)setError('Не все записи удалены: '+failures.join('; '));
 }
 
-async function load(){const [a,b,c,d]=await Promise.all([db.from('crm_customers').select('id,name,inn,phone,email').order('created_at',{ascending:false}),db.from('crm_contracts').select('id,customer_id,contract_number,contract_type,contract_date').order('created_at',{ascending:false}),db.from('crm_specifications').select('id,contract_id,specification_number,service_name,rate,unit').order('created_at',{ascending:false}),db.from('crm_sites').select('id,customer_id,contract_id,specification_id,name,loading_address,unloading_address,route_km').order('created_at',{ascending:false})]);const err=a.error??b.error??c.error??d.error;if(err)setError(err.message);else{setCustomers(a.data??[]);setContracts(b.data??[]);setSpecs(c.data??[]);setSites(d.data??[])}}
+async function load(){const [a,b,c,d]=await Promise.all([db.from('crm_customers') .select('id,name,inn,phone,email').eq('is_archived',false).order('created_at',{ascending:false}),db.from('crm_contracts').select('id,customer_id,contract_number,contract_type,contract_date').order('created_at',{ascending:false}),db.from('crm_specifications').select('id,contract_id,specification_number,service_name,rate,unit').order('created_at',{ascending:false}),db.from('crm_sites').select('id,customer_id,contract_id,specification_id,name,loading_address,unloading_address,route_km').order('created_at',{ascending:false})]);const err=a.error??b.error??c.error??d.error;if(err)setError(err.message);else{setCustomers(a.data??[]);setContracts(b.data??[]);setSpecs(c.data??[]);setSites(d.data??[])}}
 useEffect(()=>{void load()},[]);
 const update=(k:string,v:string)=>setForm(p=>({...p,[k]:v}));
 const cc=contracts.filter(c=>c.customer_id===selected),ss=specs.filter(s=>cc.some(c=>c.id===s.contract_id)),st=sites.filter(s=>s.customer_id===selected);
