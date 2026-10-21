@@ -29,5 +29,10 @@
   },
   "engines": {
     "node": ">=22.18.0"
+  },
+  "overrides": {
+    "postcss": "$postcss",
+    "braces": "3.0.4",
+    "postcss-selector-parser": "7.1.6"
   }
 }
