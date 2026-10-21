@@ -9,3 +9,6 @@
 
 /* Keep dialog actions outside the scrollable form body on touch screens. */
 .modal[open]{display:flex;flex-direction:column}.modal>form{display:flex;flex-direction:column;min-height:0;overflow:hidden}.modal-heading,.modal-actions{position:static;flex-shrink:0}.form-body{min-height:0;overflow-y:auto;overscroll-behavior:contain;flex:1}.customer-details{min-width:0}.customer-tabs{position:relative;isolation:isolate}.customer-tabs button{flex-shrink:0}
+
+/* Notifications must not intercept an underlying retry or save action. */
+.toast{pointer-events:none}.toast>button{pointer-events:auto}

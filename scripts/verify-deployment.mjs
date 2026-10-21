@@ -17,8 +17,8 @@ assert.ok(!html.includes('данные сохраняются в этом бра
 console.log('Production login page and cloud mode: OK');
 const scripts=[...new Set([...html.matchAll(/<script[^>]+src="([^"]+\.js(?:\?[^"]*)?)"/g)].map(match=>match[1].replaceAll('&amp;','&')))];
 const bundles=await Promise.all(scripts.map(async path=>{assert.equal(new URL(path,origin).origin,origin);const r=await get(path);assert.equal(r.status,200);return r.text();}));
-for(const marker of ['respectlogistic_customer_action','respectlogistic_read_workspace','yoqejkedmksmvbqagqru.supabase.co'])assert.ok(bundles.some(bundle=>bundle.includes(marker)),`Expected cloud configuration: ${marker}`);
-console.log('Customer module and intended Supabase configuration in deployed bundles: OK');
+for(const marker of ['respectlogistic_customer_action','respectlogistic_read_workspace','/supabase'])assert.ok(bundles.some(bundle=>bundle.includes(marker)),`Expected cloud configuration: ${marker}`);
+console.log('Customer module and same-origin Supabase connection in deployed bundles: OK');
 const supabase='https://yoqejkedmksmvbqagqru.supabase.co';
 const settings=await fetch(supabase+'/auth/v1/settings',{headers:{apikey:key},signal:AbortSignal.timeout(15000)});assert.equal(settings.status,200);
 const denied=await fetch(supabase+'/rest/v1/rpc/respectlogistic_read_workspace',{method:'POST',headers:{apikey:key,'Content-Type':'application/json'},body:'{}',signal:AbortSignal.timeout(15000)});

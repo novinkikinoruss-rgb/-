@@ -20,8 +20,8 @@ async function setup(page,invalid=false){
 async function fill(page){await page.getByLabel('Email',{exact:true}).fill('test@example.invalid');await page.getByLabel('Пароль',{exact:true}).fill('test-only-password');}
 test('Вход завершается открытием CRM, запросы идут через свой сайт',async({page})=>{
  const external=await setup(page);await fill(page);await page.getByRole('button',{name:'Войти',exact:true}).click();
- await expect(page.getByRole('heading',{name:'Заказчики',exact:true})).toBeVisible();await expect(page.getByText('Добавьте первого заказчика',{exact:true})).toBeVisible();expect(external).toEqual([]);
- await page.reload();await expect(page.getByRole('heading',{name:'Заказчики',exact:true})).toBeVisible();
+ await expect(page.getByRole('heading',{name:/^Заказчики/,level:1})).toBeVisible();await expect(page.getByText('Добавьте первого заказчика',{exact:true})).toBeVisible();expect(external).toEqual([]);
+ await page.reload();await expect(page.getByRole('heading',{name:/^Заказчики/,level:1})).toBeVisible();
 });
 test('Неверный пароль показывает ошибку и возвращает кнопку входа',async({page})=>{
  await setup(page,true);await fill(page);await page.getByRole('button',{name:'Войти',exact:true}).click();
@@ -37,7 +37,7 @@ test('Зависший запрос прерывается и можно сра�
  });
  await setup(page);await fill(page);await page.getByRole('button',{name:'Войти',exact:true}).click();
  await expect(page.locator('.auth-card').getByRole('alert')).toContainText('не ответил вовремя',{timeout:28000});await expect(page.getByRole('button',{name:'Войти',exact:true})).toBeEnabled();
- await page.evaluate(()=>window.__hangLogin=false);await page.getByRole('button',{name:'Войти',exact:true}).click();await expect(page.getByRole('heading',{name:'Заказчики',exact:true})).toBeVisible();
+ await page.evaluate(()=>window.__hangLogin=false);await page.getByRole('button',{name:'Войти',exact:true}).click();await expect(page.getByRole('heading',{name:/^Заказчики/,level:1})).toBeVisible();
 });
 test('Зависшая загрузка карточек показывает ошибку и допускает повтор',async({page})=>{
  await page.addInitScript(()=>{
