@@ -9,7 +9,7 @@ type Spec={id:string;contract_id:string;specification_number:string;service_name
 type Site={id:string;customer_id:string;contract_id:string|null;specification_id:string|null;name:string;loading_address:string;unloading_address:string;route_km:number|null};
 const date=()=>new Date().toISOString().slice(0,10);
 const number=(prefix:string)=>prefix+'-'+new Date().getFullYear()+'-'+String(Date.now()).slice(-7);
-export function CustomerWorkspace(){
+export function CustomerWorkspace({trashOnly=false}:{trashOnly?:boolean}){
 const [customers,setCustomers]=useState<Customer[]>([]),[contracts,setContracts]=useState<Contract[]>([]),[specs,setSpecs]=useState<Spec[]>([]),[sites,setSites]=useState<Site[]>([]);
 const [selected,setSelected]=useState(''),[step,setStep]=useState(0),[form,setForm]=useState<Record<string,string>>({}),[busy,setBusy]=useState(false),[error,setError]=useState(''),[lookup,setLookup]=useState(''),[tab,setTab]=useState<'overview'|'contracts'|'specs'|'sites'>('overview'),[filter,setFilter]=useState('');
 const [marked,setMarked]=useState<string[]>([]);
@@ -75,6 +75,7 @@ if(step===4){const r=await db.from('crm_sites').insert({customer_id:selected,con
 }catch(e){setError(e instanceof Error?e.message:'Ошибка сохранения')}finally{setBusy(false)}}
 const input=(label:string,k:string,required=false,type='text')=><label className="field">{label}<input required={required} type={type} value={form[k]??''} onChange={e=>update(k,e.target.value)}/></label>;
 const dropdown=(label:string,k:string,rows:{id:string;label:string}[])=><label className="field">{label}<select required value={form[k]??''} onChange={e=>update(k,e.target.value)}>{rows.map(x=><option key={x.id} value={x.id}>{x.label}</option>)}</select></label>;
+if(trashOnly)return <div className="customer-workspace"><div className="heading"><div><h2>Удалённые данные</h2><p className="muted">Архив заказчиков. Восстановление возвращает связанные записи.</p></div></div>{error&&<div className="notice">{error}</div>}{toast&&<div role="status" className="customer-toast">✓ {toast}</div>}<div className="panel">{trash.length===0?<p className="muted">Удалённых заказчиков нет</p>:trash.map(c=><div className="customer-record" key={c.id}><Building2 size={20}/><div><strong>{c.name}</strong><small>ИНН {c.inn||'—'}</small></div><button disabled={busy} className="button" onClick={()=>void restoreCustomer(c.id)}>Восстановить</button></div>)}</div></div>;
 return <div className="customer-workspace"><div className="heading"><div><h2>Заказчики · {customers.length}</h2><p className="muted">Единая карточка: реквизиты → договор → спецификация → объект</p></div><button className="button" onClick={start}>+ Создать заказчика</button></div>{error&&<div className="notice">{error}</div>}
 {toast&&<div role="status" className="customer-toast">✓ {toast}</div>}
 {marked.length>0&&<div className="customer-selection"><span>Выбрано: {marked.length}</span><button type="button" className="button secondary" onClick={()=>setMarked([])}>Снять выделение</button><button type="button" className="button" disabled={busy} onClick={()=>void removeSelected()}>Удалить выбранных</button></div>}
