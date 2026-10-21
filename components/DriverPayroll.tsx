@@ -1,7 +1,7 @@
 'use client';
 import {useEffect,useState} from 'react';
 import {createClient} from '@supabase/supabase-js';
-const db=createClient('https://yoqejkedmksmvbqagqru.supabase.co','sb_publishable_qnb1bLiXSsB-9VuwFMtCiQ_07nL4hyQ');
+const db=createClient((typeof window==='undefined'?'https://transport-crm-ij9v.onrender.com':window.location.origin)+'/supabase','sb_publishable_qnb1bLiXSsB-9VuwFMtCiQ_07nL4hyQ');
 type Driver={id:string;full_name:string;pay_rate_km:number};
 type Fine={id:string;driver_id:string;order_id:string|null;fine_date:string;amount:number;reason:string;paid:boolean};
 type Trip={id:string;order_number:string;driver_id:string|null;distance_km:number|null;status:string};
