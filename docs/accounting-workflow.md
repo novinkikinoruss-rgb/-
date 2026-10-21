@@ -1,6 +1,6 @@
 # Перестройка бухгалтерии
 
-Изменения подготовлены в ветке `codex/accounting-workflow`: https://github.com/novinkikinoruss-rgb/-/pull/1. На сайт не опубликованы.
+Изменения опубликованы: https://github.com/novinkikinoruss-rgb/-/pull/1 объединён в main, миграция Supabase установлена, Render deploy `dep-dbchdjijnfac73ckjs9g` имеет статус live. Подробности проверок: [build-verification.md](build-verification.md).
 
 ## Пользовательский сценарий
 
