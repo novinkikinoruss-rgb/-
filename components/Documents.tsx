@@ -1,7 +1,7 @@
 'use client';
 import {useEffect,useState} from 'react';
 import {createClient} from '@supabase/supabase-js';
-const db=createClient('https://yoqejkedmksmvbqagqru.supabase.co','sb_publishable_qnb1bLiXSsB-9VuwFMtCiQ_07nL4hyQ');
+const db=createClient((typeof window==='undefined'?'https://transport-crm-ij9v.onrender.com':window.location.origin)+'/supabase','sb_publishable_qnb1bLiXSsB-9VuwFMtCiQ_07nL4hyQ');
 type Document={id:string;order_id:string|null;trip_id:string|null;storage_path:string;doc_type:string;created_at:string};
 type Trip={id:string;order_number:string};
 type LinkedTrip={id:string;order_id:string;trip_number:string;waybill_number:string|null;trip_date:string|null;ticket_number:string|null;service_name:string|null;unit_price:number|null;volume:number|null;driver_id:string|null;vehicle_id:string|null};
