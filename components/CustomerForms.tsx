@@ -6,18 +6,18 @@ import {db} from '../lib/supabase';
 import {useNotice} from './Notifications';
 import {Modal} from './Modal';
 export type FormKind='customer'|'contract'|'specification'|'site';
-export function CustomerForms({kind,customer,edit=false,state,onClose,onSaved}:{kind:FormKind;customer:Customer|null;edit?:boolean;state:Workspace;onClose:()=>void;onSaved:(command:Command)=>Promise<void>}){
+export function CustomerForms({kind,customer,edit=false,state,preferredContractId,preferredSpecId,onClose,onSaved}:{kind:FormKind;customer:Customer|null;edit?:boolean;state:Workspace;preferredContractId?:string;preferredSpecId?:string;onClose:()=>void;onSaved:(command:Command)=>Promise<void>}){
   const notify=useNotice();const [busy,setBusy]=useState(false),[lookup,setLookup]=useState(false),[error,setError]=useState('');
   const saving=useRef(false);const innGeneration=useRef(0);const lastInn=useRef('');const requestId=useRef(crypto.randomUUID());
   const [company,setCompany]=useState<CustomerInput>(edit&&customer?{...customer}:{...emptyCustomer});
   const today=new Date().toLocaleDateString('en-CA');
   const contracts=state.contracts.filter(c=>c.customerId===customer?.id);
   const [contract,setContract]=useState({kind:'transport' as 'transport'|'supply',date:today,endDate:'',notes:''});
-  const [contractId,setContractId]=useState(contracts.at(-1)?.id||'');
+  const [contractId,setContractId]=useState(preferredContractId||contracts.at(-1)?.id||'');
   const [specDate,setSpecDate]=useState(today);
   const [rows,setRows]=useState([{id:crypto.randomUUID(),name:'',unit:'м³',price:''}]);
   const specs=state.specifications.filter(s=>s.customerId===customer?.id&&s.contractId===contractId);
-  const [specId,setSpecId]=useState(specs.at(-1)?.id||'');
+  const [specId,setSpecId]=useState(preferredSpecId||specs.at(-1)?.id||'');
   const selectedSpec=specs.find(s=>s.id===specId);
   const [site,setSite]=useState({serviceId:selectedSpec?.services[0]?.id||'',name:'',address:'',loadingAddress:'',routeKm:'',foreman:'',foremanPhone:'',foremanEmail:'',access:'',notes:''});
   const labels={customer:edit?'Редактировать заказчика':'Новый заказчик',contract:'Новый договор',specification:'Новая спецификация',site:'Новый объект'};

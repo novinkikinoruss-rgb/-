@@ -33,3 +33,11 @@ test('ИНН без провайдера показывает ошибку и п
 test('Канбан отражает реальные связи, карточка открывается из колонки',async({page})=>{
  await ready(page);await page.getByRole('button',{name:'Канбан',exact:true}).click();await expect(page.getByRole('heading',{name:'Объект готов',exact:true})).toBeVisible();await page.locator('.kanban-card').click();await expect(page.getByRole('tab',{name:'Обзор',exact:true})).toBeVisible();const overflow=await page.evaluate(()=>document.documentElement.scrollWidth>window.innerWidth);expect(overflow).toBe(false);
 });
+test('Дополнительный договор предлагает свою спецификацию даже у готовой компании',async({page})=>{
+ await ready(page);await page.getByRole('button',{name:'Договор',exact:true}).click();await save(page);
+ await expect(page.getByRole('button',{name:'Создать спецификацию',exact:true})).toBeVisible();await page.getByRole('button',{name:'Создать спецификацию',exact:true}).click();
+ await expect(page.getByRole('dialog').getByLabel('Договор')).toHaveValue(/.+/);
+ const chosen=await page.getByRole('dialog').getByLabel('Договор').locator('option:checked').textContent();expect(chosen).toContain('0002');
+ await page.getByRole('textbox',{name:'Услуга 1',exact:true}).fill('Новая услуга');await page.getByRole('textbox',{name:'Цена 1',exact:true}).fill('1000');await save(page);
+ await expect(page.getByRole('button',{name:'Создать объект',exact:true})).toBeVisible();
+});
