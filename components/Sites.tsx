@@ -1,7 +1,7 @@
 'use client';
 import {useEffect,useState} from 'react';
 import {createClient} from '@supabase/supabase-js';
-const db=createClient('https://yoqejkedmksmvbqagqru.supabase.co','sb_publishable_qnb1bLiXSsB-9VuwFMtCiQ_07nL4hyQ');
+const db=createClient((typeof window==='undefined'?'https://transport-crm-ij9v.onrender.com':window.location.origin)+'/supabase','sb_publishable_qnb1bLiXSsB-9VuwFMtCiQ_07nL4hyQ');
 type Customer={id:string;name:string};
 type Site={id:string;customer_id:string;name:string;loading_address:string;unloading_address:string;route_km:number|null};
 export function Sites(){
