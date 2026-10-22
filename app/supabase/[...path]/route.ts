@@ -7,7 +7,9 @@ async function forward(request:Request,context:Context){
   const {path}=await context.params;
   const auth=path[0]==='auth'&&path[1]==='v1';
   const rpc=path[0]==='rest'&&path[1]==='v1'&&path[2]==='rpc'&&['respectlogistic_read_workspace','respectlogistic_customer_action'].includes(path[3])&&path.length===4;
-  if((!auth&&!rpc)||path.some(part=>!/^[a-zA-Z0-9_-]+$/.test(part)))return Response.json({message:'Endpoint not available'},{status:404});
+  const tables=['crm_carriers','crm_vehicles','crm_drivers','crm_trips','crm_sites','crm_documents','crm_counterparty_invoices'];
+  const table=path[0]==='rest'&&path[1]==='v1'&&path.length===3&&tables.includes(path[2])&&['GET','HEAD','POST','PATCH'].includes(request.method);
+  if((!auth&&!rpc&&!table)||path.some(part=>!/^[a-zA-Z0-9_-]+$/.test(part)))return Response.json({message:'Endpoint not available'},{status:404});
   const base=process.env.NEXT_PUBLIC_SUPABASE_URL;
   const key=process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
   if(!base||!key||!/^https:\/\/[a-z0-9-]+\.supabase\.co\/?$/.test(base))return Response.json({message:'Сервис входа не настроен',code:'service_unavailable'},{status:503});
