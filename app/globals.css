@@ -82,3 +82,37 @@
 .counterparty-workspace .field{font-size:12px}
 .counterparty-workspace .field input,.counterparty-workspace .field select{min-height:44px;font-size:14px}
 @media(max-width:720px){.counterparty-workspace .heading{align-items:flex-start;flex-wrap:wrap}.counterparty-workspace .heading h2{font-size:24px}.counterparty-workspace .customer-profile{flex-wrap:wrap}.counterparty-workspace .customer-metrics{grid-template-columns:1fr}.counterparty-workspace .form{grid-template-columns:1fr}.counterparty-workspace .modalback{padding:12px}.counterparty-workspace .modalback>.modal{padding:22px;max-height:94dvh}.counterparty-workspace .customer-widget-toolbar{align-items:flex-start}.counterparty-workspace .customer-tabs{gap:20px}}
+
+/* Counterparties share the customer workspace components and responsive rules. */
+.counterparty-v2 .customer-choice strong{white-space:normal;overflow:visible;text-overflow:clip;overflow-wrap:anywhere;line-height:1.5}
+.counterparty-v2 .detail-title h2,.counterparty-v2 .company-heading h2{overflow-wrap:anywhere}
+.counterparty-v2 .detail-title>div,.counterparty-v2 .company-heading>div{min-width:0}
+.counterparty-v2 .module-grid{margin-bottom:17px}
+.counterparty-v2 .cp-trip-section,.counterparty-v2 .cp-finance{margin-top:20px}
+.cp-filter{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px;align-items:end;margin:18px 0}
+.cp-filter .button{min-height:42px}
+.cp-trip-results summary{cursor:pointer;padding:16px;background:#edf4e5;border-radius:12px;font-size:12px;line-height:1.6;color:#566c42}
+.cp-sheet{margin-top:14px;border:1px solid #dce3d6;border-radius:12px;max-height:560px}
+.cp-sheet table{min-width:1200px;font-variant-numeric:tabular-nums}
+.cp-sheet td,.cp-sheet th{border-right:1px solid #e2e7dc;white-space:nowrap;padding:12px}
+.cp-sheet th{position:sticky;top:0;z-index:1}
+.cp-totals{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-bottom:20px}
+.cp-totals>div{padding:18px;background:#f2f6ec;border-radius:15px;min-width:0}
+.cp-totals small{display:block;color:var(--muted);margin-bottom:9px}
+.cp-totals strong{font-size:21px;font-weight:600;overflow-wrap:anywhere}
+.cp-finance table{min-width:760px}
+.cp-finance .hint{margin-top:14px}
+.cp-badge{display:inline-flex;align-items:center;border-radius:8px;padding:6px 9px;font-size:10px;white-space:nowrap;line-height:1.5}
+.cp-badge.paid{background:#e2f2df;color:#3f773c}
+.cp-badge.partial{background:#fff0c6;color:#966c12}
+.cp-badge.overdue{background:#ffe1dd;color:#b23e32}
+.cp-badge.pending{background:#edf0f3;color:#647586}
+.cp-alert{padding:15px;background:#fff0e9;border:1px solid #e8c4b5;color:#985941;border-radius:14px;font-size:12px;line-height:1.6;margin-bottom:16px;overflow-wrap:anywhere}
+.cp-success{padding:12px 16px;color:#54743e;background:#ebf5e0;border-radius:12px;font-size:12px;margin-bottom:16px}
+.cp-service-editor{grid-column:1/-1}
+.cp-service-editor h3{margin:10px 0 16px}
+.cp-service-row{display:grid;grid-template-columns:minmax(0,2fr) 70px minmax(90px,1fr) 35px;gap:10px;align-items:end;margin-bottom:15px}
+.counterparty-v2 .customer-details{min-width:0}
+.counterparty-v2 .workflow-steps{flex-wrap:wrap}
+@media(max-width:1000px){.counterparty-v2 .customer-workspace{grid-template-columns:200px minmax(0,1fr)}.counterparty-v2 .module-grid{grid-template-columns:1fr}.cp-filter{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:720px){.counterparty-v2 .customer-workspace{grid-template-columns:1fr}.counterparty-v2 .customer-directory{position:static;max-height:260px;overflow:auto}.counterparty-v2 .page-heading{align-items:flex-start;flex-wrap:wrap}.counterparty-v2 .detail-title{align-items:flex-start;flex-wrap:wrap}.cp-totals{grid-template-columns:1fr}.cp-filter{grid-template-columns:1fr 1fr}.cp-filter .field:nth-child(-n+2){grid-column:1/-1}.cp-service-row{grid-template-columns:minmax(0,1fr) 65px 35px}.cp-service-row>.field:first-child{grid-column:1/-1}.cp-service-row>.field:nth-child(3){grid-column:1;grid-row:2}.cp-service-row>.field:nth-child(2){grid-column:2;grid-row:2}.cp-service-row>.icon-button{grid-column:3;grid-row:2}}
