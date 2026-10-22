@@ -27,7 +27,7 @@ create policy counterparty_contract_owner on public.crm_counterparty_contracts f
  with check(owner_id=(select auth.uid()) and exists(select 1 from public.crm_carriers c where c.id=counterparty_id and c.owner_id=(select auth.uid())));
 create policy counterparty_specification_owner on public.crm_counterparty_specifications for all to authenticated
  using(owner_id=(select auth.uid()))
- with check(owner_id=(select auth.uid()) and exists(select 1 from public.crm_counterparty_contracts c where c.id=contract_id and c.owner_id=(select auth.uid()) and date>=c.date and (c.end_date is null or date<=c.end_date)));
+ with check(owner_id=(select auth.uid()) and exists(select 1 from public.crm_counterparty_contracts c where c.id=contract_id and c.owner_id=(select auth.uid()) and crm_counterparty_specifications.date>=c.date and (c.end_date is null or crm_counterparty_specifications.date<=c.end_date)));
 grant select,insert,update on public.crm_counterparty_contracts,public.crm_counterparty_specifications to authenticated;
 create index counterparty_contract_owner_idx on public.crm_counterparty_contracts(owner_id,counterparty_id);
 create index counterparty_specification_owner_idx on public.crm_counterparty_specifications(owner_id,contract_id);
