@@ -37,3 +37,13 @@
 .counterparty-workspace .modal{max-width:850px}
 @media(max-width:900px){.counterparty-workspace{grid-template-columns:1fr}.counterparty-workspace .customer-list{max-height:none}.counterparty-workspace .filter-row{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:560px){.counterparty-workspace .customer-metrics{grid-template-columns:1fr}.counterparty-workspace .filter-row{grid-template-columns:1fr}.counterparty-workspace>.heading{align-items:flex-start;gap:12px}.counterparty-workspace>.heading .button{white-space:nowrap;font-size:10px;padding:10px}}
+
+/* Final counterparty layout override: keep the directory and detail panel side by side. */
+.counterparty-workspace{display:block;min-width:0}
+.counterparty-workspace>.heading{display:flex;grid-column:auto}
+.counterparty-workspace>.customer-layout{display:grid;grid-template-columns:minmax(270px,320px) minmax(0,1fr);gap:18px;align-items:start;width:100%;min-width:0}
+.counterparty-workspace .customer-list{width:100%;min-width:0}
+.counterparty-workspace .customer-detail{width:100%;min-width:0}
+.counterparty-workspace .customer-item{display:flex;box-sizing:border-box}
+.counterparty-workspace .customer-item span{flex:1}
+@media(max-width:900px){.counterparty-workspace>.customer-layout{grid-template-columns:1fr}}
