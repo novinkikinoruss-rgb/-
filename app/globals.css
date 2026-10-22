@@ -47,3 +47,38 @@
 .counterparty-workspace .customer-item{display:flex;box-sizing:border-box}
 .counterparty-workspace .customer-item span{flex:1}
 @media(max-width:900px){.counterparty-workspace>.customer-layout{grid-template-columns:1fr}}
+
+/* Counterparty screen uses the same visual tokens as the customer workspace. */
+.counterparty-workspace .heading{display:flex;justify-content:space-between;align-items:center;gap:18px;margin-bottom:22px}
+.counterparty-workspace .heading h2{font-size:28px;margin-bottom:8px}
+.counterparty-workspace .muted{color:var(--muted);font-size:12px;line-height:1.65}
+.counterparty-workspace .notice{padding:14px 18px;border:1px solid #e7beae;background:#fff3eb;border-radius:14px;margin-bottom:18px;color:#8d4d39;font-size:12px}
+.counterparty-workspace .search{display:flex;gap:10px;align-items:center;padding:12px;background:#f3f6ee;border-radius:12px;margin-bottom:15px}
+.counterparty-workspace .search input{width:100%;min-width:0;border:0;outline:0;background:transparent;font-size:12px}
+.counterparty-workspace .customer-item{display:flex;gap:12px;align-items:flex-start;text-align:left;border:1px solid transparent;background:transparent;padding:15px 12px;border-radius:14px;margin:6px 0}
+.counterparty-workspace .customer-item.chosen{border-color:#dce9cc;background:#eff5e7}
+.counterparty-workspace .customer-item strong{font-size:13px}
+.counterparty-workspace .customer-item small{font-size:11px;color:var(--muted);margin-top:7px}
+.counterparty-workspace .customer-item svg{flex-shrink:0;color:#81965c}
+.counterparty-workspace .customer-profile{display:flex;gap:14px;margin-bottom:24px}
+.counterparty-workspace .customer-profile>div{min-width:0}
+.counterparty-workspace .customer-profile h2{overflow-wrap:anywhere}
+.counterparty-workspace .customer-avatar{display:grid;place-items:center;flex-shrink:0;width:48px;height:48px;border-radius:15px;background:#eef5e7;color:#7b9656}
+.counterparty-workspace .customer-metrics{display:grid;gap:12px;margin-bottom:22px}
+.counterparty-workspace .customer-metrics>div{background:#f3f6ee;padding:18px;border-radius:16px;min-width:0}
+.counterparty-workspace .customer-metrics strong{display:block;font-size:22px;overflow-wrap:anywhere}
+.counterparty-workspace .customer-metrics small{display:block;color:var(--muted);margin-top:8px}
+.counterparty-workspace .customer-tabs button.chosen{color:#57703b;border-color:#8eac5b;font-weight:600}
+.counterparty-workspace .customer-widget-toolbar{display:flex;justify-content:space-between;align-items:center;gap:15px;margin-bottom:15px}
+.counterparty-workspace .customer-record{display:flex;align-items:center;background:#f5f7f2;border:1px solid #e8ede1;padding:16px;margin:10px 0;border-radius:14px}
+.counterparty-workspace .customer-record strong{display:block;font-size:13px}
+.counterparty-workspace .customer-record small{display:block;margin-top:8px;color:var(--muted);line-height:1.6}
+.counterparty-workspace .modalback{position:fixed;inset:0;z-index:100;background:#26342d88;backdrop-filter:blur(8px);display:flex;align-items:center;justify-content:center;padding:20px;overflow-y:auto}
+.counterparty-workspace .modalback>.modal{width:min(760px,100%);max-height:90dvh;margin:auto;padding:26px;overflow-y:auto;animation:none}
+.counterparty-workspace .modal>h2{margin-bottom:24px}
+.counterparty-workspace .modal>form{display:block;overflow:visible}
+.counterparty-workspace .form{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:20px}
+.counterparty-workspace .actions{display:flex;gap:12px;justify-content:flex-end;margin-top:24px;padding-top:18px;border-top:1px solid var(--line)}
+.counterparty-workspace .field{font-size:12px}
+.counterparty-workspace .field input,.counterparty-workspace .field select{min-height:44px;font-size:14px}
+@media(max-width:720px){.counterparty-workspace .heading{align-items:flex-start;flex-wrap:wrap}.counterparty-workspace .heading h2{font-size:24px}.counterparty-workspace .customer-profile{flex-wrap:wrap}.counterparty-workspace .customer-metrics{grid-template-columns:1fr}.counterparty-workspace .form{grid-template-columns:1fr}.counterparty-workspace .modalback{padding:12px}.counterparty-workspace .modalback>.modal{padding:22px;max-height:94dvh}.counterparty-workspace .customer-widget-toolbar{align-items:flex-start}.counterparty-workspace .customer-tabs{gap:20px}}
