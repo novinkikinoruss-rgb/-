@@ -1,4 +1,5 @@
 -- Контрагенты: связь исполнителя с техникой, водителями, рейсами и счетами.
+alter table public.crm_carriers add column if not exists email text;
 alter table public.crm_vehicles add column if not exists carrier_id uuid references public.crm_carriers(id);
 alter table public.crm_drivers add column if not exists carrier_id uuid references public.crm_carriers(id);
 alter table public.crm_trips add column if not exists carrier_id uuid references public.crm_carriers(id);
