@@ -1,6 +1,7 @@
 import {exportTripFiles,type ExportManifest} from '../../../lib/trip-drive';
 export const runtime='nodejs';
 export const dynamic='force-dynamic';
+export async function GET(){return Response.json({configured:Boolean(process.env.GOOGLE_DRIVE_CLIENT_ID&&process.env.GOOGLE_DRIVE_CLIENT_SECRET&&process.env.GOOGLE_DRIVE_REFRESH_TOKEN&&process.env.GOOGLE_DRIVE_TRIPS_ROOT_FOLDER_ID)},{headers:{'Cache-Control':'no-store'}})}
 export async function POST(request:Request){
  const authorization=request.headers.get('authorization');
  if(!authorization?.startsWith('Bearer '))return Response.json({message:'Войдите в CRM'},{status:401});

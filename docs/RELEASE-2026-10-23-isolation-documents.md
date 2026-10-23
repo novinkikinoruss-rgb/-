@@ -19,7 +19,9 @@ Automatic Drive export requires server-side OAuth configuration, separate from t
 
 Store credentials in Render environment settings, never in source, browser storage, public variables, chat messages or logs. Share/authorize the chosen target folder with the account represented by the OAuth refresh token. Without configuration the site reports awaiting_connection, never a successful archive. No real customer documents existed at inspection, so no live document archive was possible in this release.
 
-Apply database migrations in order: app_isolation.sql, trip_documents.sql, app_boundary_guards.sql. Earlier migrations remain prerequisites. Do not rerun already applied DDL indiscriminately. The isolation SQL references database functions installed by earlier releases.
+Drive target folder: https://drive.google.com/drive/folders/10sbB_IbsQB8C_nPXjiChiyO1d4ces0UF. GOOGLE_DRIVE_TRIPS_ROOT_FOLDER_ID was merged into the Render environment without replacing other variables. OAuth credentials still require a separate application connection. Once configured, awaiting_connection exports are retried automatically while the trips page is open, or through the Send button.
+
+Apply database migrations in order: app_isolation.sql, trip_documents.sql, app_boundary_guards.sql, trip_document_kinds.sql. Earlier migrations remain prerequisites. Do not rerun already applied DDL indiscriminately. The isolation SQL references database functions installed by earlier releases.
 
 Validation: customer/fleet/trips pure logic, proxy scope/write restrictions, Drive hierarchy/retry/failure behavior; authenticated SQL integration with rolled-back customer/trip/fleet/storage metadata fixtures. It covers same-owner foreign driver/trip exclusion, forbidden assignment, CRUD, optimistic locking, atomic protected deletion, payroll, document confirmation, queue claim locking, pending connection and invalidation. Render build verifies Next.js/TypeScript. Browser access limitations are reported separately; a successful build/live deploy is not a visual UI test.
 

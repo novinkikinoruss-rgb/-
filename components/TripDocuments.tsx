@@ -3,7 +3,7 @@ import {useState} from 'react';
 import {db} from '../lib/supabase';
 export type TripFile={id:string;trip_id:string;file_name:string;doc_type:string;storage_path:string;mime_type:string;file_size:number};
 export type DriveExport={trip_id:string;state:string;folder_url:string|null;error:string|null};
-export const documentKinds:Record<string,string>={ttn:'ТТН / накладная',waybill:'Путевой лист',ticket:'Талон',invoice:'УПД / реестр',other:'Другой документ'};
+export const documentKinds:Record<string,string>={ttn:'ТТН / накладная',waybill:'Путевой лист',ticket:'Талон',upd:'УПД',registry:'Реестр',invoice:'Счёт',other:'Другой документ'};
 export async function sendTripToDrive(tripId:string){
  if(!db)return;const {data}=await db.auth.getSession();
  if(!data.session)return;
@@ -40,7 +40,7 @@ export function TripDocuments({tripId,files,confirmed,completed,archive,onChange
   <select aria-label="Тип документа" value={kind} disabled={busy} onChange={e=>setKind(e.target.value)}>{Object.entries(documentKinds).map(([k,v])=><option key={k} value={k}>{v}</option>)}</select>
   <label className={'button secondary compact '+(busy?'disabled':'')}>{busy?'Обработка…':'Загрузить документ'}<input className="trip-file-input" type="file" disabled={busy} accept="application/pdf,image/jpeg,image/png,image/webp" onChange={e=>{const f=e.target.files?.[0];e.target.value='';if(f)void upload(f)}}/></label>
   {!!files.length&&!confirmed&&<button className="button secondary compact" disabled={busy} onClick={()=>void confirm()}>Комплект полный</button>}
-  {confirmed&&completed&&<span className="trip-archive-status">{archive?.state==='complete'&&archive.folder_url?<a href={archive.folder_url} target="_blank" rel="noreferrer">Документы на Google Диске ↗</a>:archive?.state==='awaiting_connection'?'Google Диск: ожидается подключение':archive?.state==='error'?'Ошибка отправки на Диск':archive?.state==='processing'?'Отправка на Диск…':'В очереди на Google Диск'}{archive?.error&&<small>{archive.error}</small>}{['error','pending'].includes(archive?.state||'pending')&&<button className="text-button" disabled={busy} onClick={()=>void retry()}>Отправить</button>}</span>}
+  {confirmed&&completed&&<span className="trip-archive-status">{archive?.state==='complete'&&archive.folder_url?<a href={archive.folder_url} target="_blank" rel="noreferrer">Документы на Google Диске ↗</a>:archive?.state==='awaiting_connection'?'Google Диск: ожидается подключение':archive?.state==='error'?'Ошибка отправки на Диск':archive?.state==='processing'?'Отправка на Диск…':'В очереди на Google Диск'}{archive?.error&&<small>{archive.error}</small>}{['error','pending','awaiting_connection'].includes(archive?.state||'pending')&&<button className="text-button" disabled={busy} onClick={()=>void retry()}>Отправить</button>}</span>}
   {error&&<span className="trip-document-error" role="alert">{error}</span>}
  </div>
 }

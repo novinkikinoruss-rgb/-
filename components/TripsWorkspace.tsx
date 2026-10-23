@@ -27,7 +27,7 @@ export function TripsWorkspace(){
   catch(e){setError((e as Error).message||'Не удалось загрузить рейсы')}finally{setLoading(false)}
  }
  useEffect(()=>{void reload();const timer=setInterval(()=>void reload(),60000);return ()=>clearInterval(timer)},[]);
- useEffect(()=>{const pending=data.exports.filter(e=>e.state==='pending');if(!pending.length||sending.current)return;sending.current=true;void(async()=>{try{for(const e of pending)await sendTripToDrive(e.trip_id)}catch{}finally{sending.current=false;await reload()}})()},[data.exports]);
+ useEffect(()=>{const pending=data.exports.filter(e=>e.state==='pending'||e.state==='awaiting_connection');if(!pending.length||sending.current)return;sending.current=true;void(async()=>{let attempted=false;try{const readiness=await fetch('/api/trip-drive',{cache:'no-store'}).then(r=>r.json());for(const e of pending.filter(e=>e.state==='pending'||readiness.configured)){attempted=true;await sendTripToDrive(e.trip_id)}}catch{}finally{sending.current=false;if(attempted)await reload()}})()},[data.exports]);
  const vehicleNames=Object.fromEntries(data.vehicles.map(v=>[v.id,v.plate]));
  const rows=filterTrips(data.trips,applied,vehicleNames),visibleIds=rows.map(t=>t.id),selectedRows=data.trips.filter(t=>selected.includes(t.id));
  const allChecked=rows.length>0&&rows.every(t=>selected.includes(t.id)),someChecked=rows.some(t=>selected.includes(t.id));

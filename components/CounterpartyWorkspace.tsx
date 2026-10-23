@@ -47,7 +47,7 @@ export function CounterpartyWorkspace(){
     db.from('crm_drivers').select('id,carrier_id,full_name,phone,license_number'),
     db.from('crm_trips').select('id,carrier_id,trip_number,trip_date,service_name,volume,unit_price,site_id,driver_id,vehicle_id,status').is('deleted_at',null).order('trip_date',{ascending:false}),
     db.from('crm_sites').select('id,name').is('deleted_at',null),
-    db.from('crm_documents').select('id,trip_id,doc_type').is('deleted_at',null),
+    db.from('crm_trip_files').select('id,trip_id,doc_type'),
     db.from('crm_counterparty_invoices').select('id,counterparty_id,invoice_number,invoice_date,due_date,amount,paid_amount,status').is('deleted_at',null).order('invoice_date',{ascending:false}),
     db.from('crm_counterparty_contracts').select('id,counterparty_id,number,kind,date,end_date,notes').order('date',{ascending:false}),
     db.from('crm_counterparty_specifications').select('id,contract_id,number,date,services').order('date',{ascending:false})
@@ -110,7 +110,7 @@ export function CounterpartyWorkspace(){
    if(kind==='carrier')setTab('Обзор');if(kind==='contract')setTab('Спецификации');
   }catch(e){setError((e as Error).message||'Ошибка сохранения')}finally{setBusy(false)}
  }
- function hasDoc(trip:string,type:string){const aliases:Record<string,string[]>= {'Накладная':['наклад','waybill','ttn'],'Талон':['талон','ticket'],'УПД':['упд','upd'],'Реестр':['реестр','registry','register']};return docs.some(d=>d.trip_id===trip&&aliases[type].some(a=>d.doc_type.toLowerCase().includes(a)))}
+ function hasDoc(trip:string,type:string){const aliases:Record<string,string[]>= {'Накладная':['наклад','ttn'],'Талон':['талон','ticket'],'УПД':['упд','upd'],'Реестр':['реестр','registry','register']};return docs.some(d=>d.trip_id===trip&&aliases[type].some(a=>d.doc_type.toLowerCase().includes(a)))}
  const field=(key:string,label:string,type='text',required=false)=><label className="field" key={key}>{label}{required?' *':''}<input type={type} required={required} value={form[key]||''} step={type==='number'?'0.01':undefined} min={type==='number'?'0.01':undefined} onChange={e=>set(key,e.target.value)}/></label>;
  const contractBlock=<section className="panel module-card"><div className="block-heading"><h3>Договоры</h3><button className="button compact" onClick={()=>open('contract')}><Plus size={15}/>Договор</button></div>{cpContracts.map(c=><article className="record" key={c.id}><span className="soft-icon"><FileText size={18}/></span><div><strong>{c.number}</strong><small>{c.kind==='transport'?'Транспортные услуги':'Поставка'} · {c.date}</small></div></article>)}{!cpContracts.length&&<p className="hint">После карточки создайте договор исполнителя.</p>}</section>;
  const specBlock=<section className="panel module-card"><div className="block-heading"><h3>Спецификации</h3><button className="button compact" disabled={!cpContracts.length} onClick={()=>open('specification',{contract_id:cpContracts[0]?.id||''})}><Plus size={15}/>Спецификация</button></div>{cpSpecs.map(s=><article className="spec-record" key={s.id}><div className="mini-heading"><strong>{s.number}</strong><small>{s.date} · {cpContracts.find(c=>c.id===s.contract_id)?.number}</small></div>{s.services.map(service=><div className="price-row" key={service.id}><span>{service.name}</span><small>{service.unit}</small><strong>{money(service.price)}</strong></div>)}</article>)}{!cpSpecs.length&&<p className="hint">{cpContracts.length?'Добавьте услуги и цены к договору.':'Сначала создайте договор.'}</p>}</section>;
