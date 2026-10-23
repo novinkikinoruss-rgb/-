@@ -1,4 +1,4 @@
-export type TripRow={id:string;trip_number:string;trip_date:string|null;customer_id:string|null;site_id:string|null;vehicle_id:string|null;driver_id:string|null;carrier_id:string|null;loading_address:string;unloading_address:string;volume:number;unit:string;unit_price:number;service_name:string|null;status:string;modified_at:string;locked:boolean};
+export type TripRow={id:string;trip_number:string;trip_date:string|null;customer_id:string|null;site_id:string|null;vehicle_id:string|null;driver_id:string|null;carrier_id:string|null;loading_address:string;unloading_address:string;volume:number;unit:string;unit_price:number;service_name:string|null;status:string;modified_at:string;locked:boolean;documents_confirmed?:boolean};
 export type TripFilter={from:string;to:string;customer:string;site:string;search:string};
 export const blankTripFilter:TripFilter={from:'',to:'',customer:'',site:'',search:''};
 export function filterTrips(rows:TripRow[],filter:TripFilter,vehicleNames:Record<string,string>={}){
@@ -24,3 +24,4 @@ export function volumeTotals(rows:TripRow[]){
  const result:Record<string,number>={};for(const t of rows){const unit=t.unit||'м³';result[unit]=(result[unit]||0)+Number(t.volume||0)}
  return Object.entries(result).map(([unit,total])=>({unit,total:Math.round((total+Number.EPSILON)*1000)/1000}));
 }
+

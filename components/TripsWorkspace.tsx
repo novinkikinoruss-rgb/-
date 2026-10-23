@@ -1,16 +1,17 @@
 'use client';
-import {useEffect,useRef,useState,type FormEvent} from 'react';
+import {Fragment,useEffect,useRef,useState,type FormEvent} from 'react';
 import {Plus,Search,RefreshCw,Download,Pencil,Trash2,Truck,Lock} from 'lucide-react';
 import {db} from '../lib/supabase';
 import {Modal} from './Modal';
+import {TripDocuments,sendTripToDrive,type TripFile,type DriveExport} from './TripDocuments';
 import {blankTripFilter,filterTrips,toggleVisibleSelection,tripPeriod,volumeTotals,csvCell,type TripFilter,type TripRow} from '../lib/trips';
 type Customer={id:string;name:string};
 type Site={id:string;customer_id:string;name:string;loading_address:string;unloading_address:string;route_km:string|null;service_name:string|null;unit:string|null;unit_price:number|null;contract_number:string|null};
 type Vehicle={id:string;plate:string;brand:string|null;model:string|null;carrier_id:string|null;is_subcontractor_vehicle:boolean;assigned_driver_id:string|null;archived_at:string|null};
 type Driver={id:string;full_name:string;carrier_id:string|null;job_status:string;archived_at:string|null};
 type Carrier={id:string;name:string;is_blocked:boolean};
-type Workspace={trips:TripRow[];customers:Customer[];sites:Site[];vehicles:Vehicle[];drivers:Driver[];carriers:Carrier[]};
-const empty:Workspace={trips:[],customers:[],sites:[],vehicles:[],drivers:[],carriers:[]};
+type Workspace={trips:TripRow[];customers:Customer[];sites:Site[];vehicles:Vehicle[];drivers:Driver[];carriers:Carrier[];files:TripFile[];exports:DriveExport[]};
+const empty:Workspace={trips:[],customers:[],sites:[],vehicles:[],drivers:[],carriers:[],files:[],exports:[]};
 const statuses:Record<string,string>={assigned:'Запланирован',sent:'В работе',delivered:'Выполнен',cancelled:'Отменён'};
 const money=(n:number)=>new Intl.NumberFormat('ru-RU',{style:'currency',currency:'RUB'}).format(n||0);
 const today=()=>tripPeriod('today').from;
@@ -18,14 +19,15 @@ export function TripsWorkspace(){
  const [data,setData]=useState<Workspace>(empty),[loading,setLoading]=useState(true),[busy,setBusy]=useState(false),[error,setError]=useState(''),[notice,setNotice]=useState('');
  const [draft,setDraft]=useState<TripFilter>({...blankTripFilter}),[applied,setApplied]=useState<TripFilter>({...blankTripFilter}),[period,setPeriod]=useState('all'),[selected,setSelected]=useState<string[]>([]);
  const [modal,setModal]=useState<'edit'|'delete'|null>(null),[form,setForm]=useState<Record<string,string>>({}),[expectedVersion,setExpectedVersion]=useState<string|null>(null);
- const selectAll=useRef<HTMLInputElement>(null);
+ const selectAll=useRef<HTMLInputElement>(null),sending=useRef(false);
  async function reload(){
   if(!db){setError('Рабочая база не подключена');setLoading(false);return}
   setLoading(true);
-  try{const {data:result,error:failure}=await db.rpc('crm_read_trip_workspace');if(failure)throw Error(failure.message);if(!result||!Array.isArray(result.trips)||!Array.isArray(result.customers))throw Error('Список рейсов получен в неверном формате');setData(result as Workspace);setSelected(ids=>ids.filter(id=>result.trips.some((t:TripRow)=>t.id===id)));setError('')}
+  try{const [workspace,files,exports]=await Promise.all([db.rpc('crm_read_trip_workspace'),db.from('crm_trip_files').select('*').order('created_at'),db.from('crm_drive_exports').select('*')]);const {data:result,error:failure}=workspace;if(failure||files.error||exports.error)throw Error((failure||files.error||exports.error)!.message);if(!result||!Array.isArray(result.trips)||!Array.isArray(result.customers))throw Error('Список рейсов получен в неверном формате');setData({...result,files:files.data||[],exports:exports.data||[]} as Workspace);setSelected(ids=>ids.filter(id=>result.trips.some((t:TripRow)=>t.id===id)));setError('')}
   catch(e){setError((e as Error).message||'Не удалось загрузить рейсы')}finally{setLoading(false)}
  }
- useEffect(()=>{void reload()},[]);
+ useEffect(()=>{void reload();const timer=setInterval(()=>void reload(),60000);return ()=>clearInterval(timer)},[]);
+ useEffect(()=>{const pending=data.exports.filter(e=>e.state==='pending');if(!pending.length||sending.current)return;sending.current=true;void(async()=>{try{for(const e of pending)await sendTripToDrive(e.trip_id)}catch{}finally{sending.current=false;await reload()}})()},[data.exports]);
  const vehicleNames=Object.fromEntries(data.vehicles.map(v=>[v.id,v.plate]));
  const rows=filterTrips(data.trips,applied,vehicleNames),visibleIds=rows.map(t=>t.id),selectedRows=data.trips.filter(t=>selected.includes(t.id));
  const allChecked=rows.length>0&&rows.every(t=>selected.includes(t.id)),someChecked=rows.some(t=>selected.includes(t.id));
@@ -83,6 +85,7 @@ export function TripsWorkspace(){
  const input=(key:string,label:string,type='text',required=false)=><label className="field" key={key}>{label}{required?' *':''}<input type={type} required={required} value={form[key]||''} min={type==='number'?0:undefined} step={type==='number'?'0.001':undefined} placeholder={key==='trip_number'?'Автоматический номер':undefined} onChange={e=>set(key,e.target.value)}/></label>;
  return <section className="trips-workspace">
   <div className="page-heading"><div><span className="eyebrow">Операционная таблица</span><h1>Рейсы <span className="count-badge">{rows.length}</span></h1><p>Погрузка, выгрузка, техника и объёмы — в одной таблице.</p></div><div className="trip-heading-actions"><button className="button secondary" disabled={loading||!rows.length} onClick={exportCSV}><Download size={16}/>Выгрузить CSV</button><button className="button" onClick={newTrip}><Plus size={18}/>Добавить рейс</button></div></div>
+  {rows.some(t=>!data.files.some(f=>f.trip_id===t.id))&&<div className="trip-alert" role="alert">Нет документов от водителя по рейсам: {rows.filter(t=>!data.files.some(f=>f.trip_id===t.id)).length}. Загрузите файлы в строке под рейсом.</div>}
   {error&&!modal&&<div className="trip-alert" role="alert">{error}<button className="text-button" onClick={()=>void reload()}>Обновить список</button></div>}{notice&&<p className="trip-success" role="status">{notice}</p>}
   <form className="panel trip-filter" onSubmit={e=>{e.preventDefault();if(draft.from&&draft.to&&draft.from>draft.to){setError('Дата начала периода позже даты окончания');return}setApplied({...draft});setSelected([]);setError('')}}>
    <label className="field">Период<select value={period} onChange={e=>{setPeriod(e.target.value);if(e.target.value!=='custom')setDraft(p=>({...p,...tripPeriod(e.target.value)}))}}><option value="all">Все даты</option><option value="today">Сегодня</option><option value="week">Последние 7 дней</option><option value="month">Текущий месяц</option><option value="custom">Свой период</option></select></label>
@@ -97,14 +100,14 @@ export function TripsWorkspace(){
   <div className="trip-sheet" aria-label="Таблица рейсов"><table>
    <colgroup><col style={{width:46}}/><col style={{width:150}}/><col style={{width:115}}/><col style={{width:230}}/><col style={{width:230}}/><col style={{width:185}}/><col style={{width:110}}/><col style={{width:210}}/><col style={{width:200}}/><col style={{width:210}}/><col style={{width:190}}/><col style={{width:130}}/><col style={{width:140}}/><col style={{width:140}}/><col style={{width:145}}/></colgroup>
    <thead><tr><th className="trip-sticky-check"><input ref={selectAll} type="checkbox" aria-label="Выбрать все рейсы" checked={allChecked} disabled={!rows.length||busy} onChange={e=>setSelected(p=>toggleVisibleSelection(p,visibleIds,e.target.checked))}/></th><th className="trip-sticky-number">Номер рейса</th><th>Дата</th><th>Адрес погрузки</th><th>Адрес выгрузки</th><th>Госномер / техника</th><th>Объём</th><th>Заказчик</th><th>Объект</th><th>Водитель</th><th>Услуга</th><th>Цена, ₽</th><th>Сумма, ₽</th><th>Статус</th><th>Действия</th></tr></thead>
-   <tbody>{rows.map((t,index)=>{const v=data.vehicles.find(v=>v.id===t.vehicle_id),contractor=Boolean(t.carrier_id||v?.carrier_id||v?.is_subcontractor_vehicle),carrierName=data.carriers.find(c=>c.id===(t.carrier_id||v?.carrier_id))?.name;return <tr key={t.id} className={selected.includes(t.id)?'trip-selected':''} onDoubleClick={()=>editTrip(t)}>
+   <tbody>{rows.map((t,index)=>{const v=data.vehicles.find(v=>v.id===t.vehicle_id),contractor=Boolean(t.carrier_id||v?.carrier_id||v?.is_subcontractor_vehicle),carrierName=data.carriers.find(c=>c.id===(t.carrier_id||v?.carrier_id))?.name;return <Fragment key={t.id}><tr className={selected.includes(t.id)?'trip-selected':''} onDoubleClick={()=>editTrip(t)}>
     <td className="trip-sticky-check"><input type="checkbox" checked={selected.includes(t.id)} disabled={busy} aria-label={'Выбрать рейс '+t.trip_number} onChange={e=>setSelected(p=>e.target.checked?Array.from(new Set([...p,t.id])):p.filter(id=>id!==t.id))}/></td>
     <td className="trip-sticky-number"><strong>{t.trip_number}</strong>{t.locked&&<small className="trip-locked"><Lock size={11}/>Счёт / выплаты</small>}</td><td>{t.trip_date||'—'}</td><td>{t.loading_address||'—'}</td><td>{t.unloading_address||'—'}</td>
     <td><span className={'trip-plate '+(contractor?'contractor':'owned')}>{v?.plate||'Не указано'}</span><small>{contractor?'Контрагент':'Своя техника'}</small>{contractor&&carrierName&&<small>{carrierName}</small>}</td>
     <td><strong>{Number(t.volume||0).toLocaleString('ru-RU',{maximumFractionDigits:3})}</strong><small>{t.unit||'м³'}</small></td>
-    <td>{data.customers.find(c=>c.id===t.customer_id)?.name||'—'}</td><td>{data.sites.find(s=>s.id===t.site_id)?.name||'—'}</td><td>{data.drivers.find(d=>d.id===t.driver_id)?.full_name||'—'}</td><td>{t.service_name||'—'}</td><td>{money(Number(t.unit_price||0))}</td><td><strong>{money(Number(t.unit_price||0)*Number(t.volume||0))}</strong></td><td><span className={'trip-status '+t.status}>{statuses[t.status]||t.status}</span></td>
+    <td>{data.customers.find(c=>c.id===t.customer_id)?.name||'—'}</td><td>{data.sites.find(s=>s.id===t.site_id)?.name||'—'}</td><td>{data.drivers.find(d=>d.id===t.driver_id)?.full_name||'—'}</td><td>{t.service_name||'—'}</td><td>{money(Number(t.unit_price||0))}</td><td><strong>{money(Number(t.unit_price||0)*Number(t.volume||0))}</strong></td><td><span className={'trip-status '+(t.status==='delivered'&&(!t.documents_confirmed||!data.files.some(f=>f.trip_id===t.id))?'sent':t.status)}>{t.status==='delivered'&&!t.documents_confirmed?'Выполнен · нужны документы':statuses[t.status]||t.status}</span></td>
     <td><div className="trip-row-actions"><button className="icon-button" aria-label={'Редактировать '+t.trip_number} disabled={busy||t.locked} onClick={()=>editTrip(t)}><Pencil size={15}/></button><button className="icon-button trip-delete" aria-label={'Удалить '+t.trip_number} disabled={busy} onClick={()=>{setSelected([t.id]);setError('');setModal('delete')}}><Trash2 size={15}/></button></div></td>
-   </tr>})}</tbody>
+   </tr><tr className="trip-documents-row"><td colSpan={15}><TripDocuments tripId={t.id} files={data.files.filter(f=>f.trip_id===t.id)} confirmed={Boolean(t.documents_confirmed)} completed={t.status==='delivered'} archive={data.exports.find(e=>e.trip_id===t.id)} onChanged={reload}/></td></tr></Fragment>})}</tbody>
   </table>{loading&&<div className="trip-table-empty">Загрузка рейсов…</div>}{!loading&&!rows.length&&<div className="trip-table-empty"><Truck size={30}/><strong>Рейсов пока нет</strong><p>Измените фильтр или добавьте первый рейс.</p><button className="button" onClick={newTrip}>Добавить рейс</button></div>}</div>
   <footer className="trip-sheet-footer"><span>Рейсов: <strong>{rows.length}</strong></span><span>Объём: <strong>{volume.map(v=>v.total.toLocaleString('ru-RU')+' '+v.unit).join(' · ')||'—'}</strong></span><span>Сумма: <strong>{money(rows.reduce((s,t)=>s+Number(t.volume||0)*Number(t.unit_price||0),0))}</strong></span><span className="trip-footer-hint">Прокрутите таблицу вправо для остальных столбцов</span></footer>
   {modal==='edit'&&<Modal title={expectedVersion?'Редактирование рейса':'Новый рейс'} busy={busy} onClose={()=>{if(!busy)setModal(null)}}><form onSubmit={save}><fieldset className="form-body" disabled={busy}><div className="form-grid">
@@ -123,3 +126,4 @@ export function TripsWorkspace(){
   {modal==='delete'&&<Modal title={'Удаление рейсов: '+selectedRows.length} busy={busy} onClose={()=>{if(!busy)setModal(null)}}><div className="form-body"><p className="trip-delete-description">Из рабочего списка будут убраны выбранные рейсы. История сохраняется в базе. Если хотя бы один рейс связан со счётом, выплатой или удержанием, выборка не будет удалена.</p><ul className="trip-delete-list">{selectedRows.slice(0,12).map(t=><li key={t.id}>{t.trip_number} · {t.trip_date}</li>)}{selectedRows.length>12&&<li>И ещё {selectedRows.length-12} рейсов</li>}</ul>{error&&<div className="form-error" role="alert">{error}</div>}</div><footer className="modal-actions"><span>Выбрано {selectedRows.length}</span><button className="button secondary" disabled={busy} onClick={()=>setModal(null)}>Отмена</button><button className="button trip-danger-button" disabled={busy||!selectedRows.length} onClick={()=>void remove()}>{busy?'Удаление…':'Удалить выбранные'}</button></footer></Modal>}
  </section>
 }
+

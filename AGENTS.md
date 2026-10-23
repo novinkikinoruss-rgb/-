@@ -7,7 +7,7 @@ Supabase project: yoqejkedmksmvbqagqru.
 
 Preserve the customer section design: pale sage background, white rounded panels, charcoal sidebar, lime accents. Verify mobile layout, wrapping of long names and native modal behavior.
 
-Own fleet uses crm_drivers and crm_vehicles with carrier_id IS NULL; vehicles must also have is_subcontractor_vehicle=false.
+Own fleet uses crm_drivers and crm_vehicles with carrier_id IS NULL and explicit app_scope=respectlogistic; vehicles must also have is_subcontractor_vehicle=false. Never read shared crm_* tables without the application boundary. Same-origin requests must use rl_crm_* checked security-invoker views. Legacy rows with no application provenance belong to the other CRM and must not be adopted or deleted. Original payroll RPCs remain for the other app; this site uses rl_crm_* payroll/maintenance variants.
 Salary uses ONE route leg. Bonus adds to base pay. Company tax adds to company expense and never reduces driver salary. Fine deductions reduce driver payout only after a saved allocation. Use existing payroll RPCs; do not create a second ledger.
 
 After authorized changes: test calculations and database ownership/relationships, deploy to Render, wait for the exact final deploy to become live, then verify actual page/API behavior when access is available. State verification limitations accurately.

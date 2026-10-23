@@ -6,17 +6,24 @@ type Context={params:Promise<{path:string[]}>};
 async function forward(request:Request,context:Context){
   const {path}=await context.params;
   const auth=path[0]==='auth'&&path[1]==='v1';
-  const rpc=path[0]==='rest'&&path[1]==='v1'&&path[2]==='rpc'&&['respectlogistic_read_workspace','respectlogistic_customer_action','crm_prepare_payroll','crm_pay_driver_accruals','crm_apply_driver_fines','crm_complete_fleet_maintenance','crm_read_trip_workspace','crm_save_trip','crm_delete_trips'].includes(path[3])&&path.length===4;
-  const tables=['crm_carriers','crm_vehicles','crm_drivers','crm_trips','crm_sites','crm_documents','crm_counterparty_invoices','crm_counterparty_contracts','crm_counterparty_specifications','crm_driver_fines','crm_payroll_accruals','crm_payroll_payments','crm_payroll_deductions','crm_fleet_maintenance'];
-  const table=path[0]==='rest'&&path[1]==='v1'&&path.length===3&&tables.includes(path[2])&&['GET','HEAD','POST','PATCH'].includes(request.method);
-  if((!auth&&!rpc&&!table)||path.some(part=>!/^[a-zA-Z0-9_-]+$/.test(part)))return Response.json({message:'Endpoint not available'},{status:404});
+  const rpc=path[0]==='rest'&&path[1]==='v1'&&path[2]==='rpc'&&['respectlogistic_read_workspace','respectlogistic_customer_action','crm_prepare_payroll','crm_pay_driver_accruals','crm_apply_driver_fines','crm_complete_fleet_maintenance','crm_read_trip_workspace','crm_save_trip','crm_delete_trips','respectlogistic_register_trip_file','respectlogistic_confirm_trip_documents'].includes(path[3])&&path.length===4;
+  const tables=['crm_carriers','crm_vehicles','crm_drivers','crm_trips','crm_sites','crm_documents','crm_counterparty_invoices','crm_counterparty_contracts','crm_counterparty_specifications','crm_driver_fines','crm_payroll_accruals','crm_payroll_payments','crm_payroll_deductions','crm_fleet_maintenance','crm_trip_files','crm_drive_exports'];
+  const writable=['crm_carriers','crm_vehicles','crm_drivers','crm_counterparty_invoices','crm_counterparty_contracts','crm_counterparty_specifications','crm_driver_fines'];
+  const table=path[0]==='rest'&&path[1]==='v1'&&path.length===3&&tables.includes(path[2])&&(['GET','HEAD'].includes(request.method)||writable.includes(path[2])&&['POST','PATCH'].includes(request.method));
+  const storage=path[0]==='storage'&&path[1]==='v1'&&path[2]==='object'&&(path[3]==='respectlogistic-trip-documents'||path[3]==='sign'&&path[4]==='respectlogistic-trip-documents')&&['GET','POST','DELETE'].includes(request.method);
+  if((!auth&&!rpc&&!table&&!storage)||path.some(part=>!(storage?/^[a-zA-Z0-9_.-]+$/:/^[a-zA-Z0-9_-]+$/).test(part)||part==='..'||part==='.'))return Response.json({message:'Endpoint not available'},{status:404});
   const base=process.env.NEXT_PUBLIC_SUPABASE_URL;
   const key=process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
   if(!base||!key||!/^https:\/\/[a-z0-9-]+\.supabase\.co\/?$/.test(base))return Response.json({message:'Сервис входа не настроен',code:'service_unavailable'},{status:503});
-  const destination=new URL(path.join('/'),base.replace(/\/?$/,'/'));
+  // Public CRM table names are compatibility aliases at this boundary only.
+  // The database views enforce owner AND explicit application provenance on reads/writes.
+  const target=[...path];
+  if(table)target[2]='rl_'+path[2];
+  if(rpc&&['crm_prepare_payroll','crm_pay_driver_accruals','crm_apply_driver_fines','crm_complete_fleet_maintenance'].includes(path[3]))target[3]='rl_'+path[3];
+  const destination=new URL(target.join('/'),base.replace(/\/?$/,'/'));
   destination.search=new URL(request.url).search;
   const headers=new Headers({apikey:key});
-  for(const name of ['authorization','content-type','accept','x-client-info','x-supabase-api-version','prefer','range']){
+  for(const name of ['authorization','content-type','accept','x-client-info','x-supabase-api-version','prefer','range','x-upsert']){
     const value=request.headers.get(name);if(value)headers.set(name,value);
   }
   const controller=new AbortController();
@@ -24,7 +31,7 @@ async function forward(request:Request,context:Context){
   const timer=setTimeout(()=>controller.abort(),12000);
   try{
     const body=['GET','HEAD'].includes(request.method)?undefined:await request.arrayBuffer();
-    if(body&&body.byteLength>1048576)return Response.json({message:'Слишком большой запрос'},{status:413});
+    if(body&&body.byteLength>(storage?11534336:1048576))return Response.json({message:'Слишком большой запрос'},{status:413});
     const upstream=await fetch(destination,{method:request.method,headers,body,signal:controller.signal,cache:'no-store',redirect:'error'});
     const result=await upstream.arrayBuffer();
     const responseHeaders=new Headers({'Cache-Control':'no-store, private'});
