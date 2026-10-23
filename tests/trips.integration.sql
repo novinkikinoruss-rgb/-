@@ -1,0 +1,52 @@
+begin;
+select set_config('request.jwt.claim.sub',(select id::text from auth.users order by created_at limit 1),true) is not null as identity_ready;
+set local role authenticated;
+do $$
+declare c uuid=gen_random_uuid();co uuid=gen_random_uuid();sp uuid=gen_random_uuid();sv uuid=gen_random_uuid();s uuid=gen_random_uuid();d uuid;v uuid;carrier uuid;cv uuid;t uuid=gen_random_uuid();free_trip uuid=gen_random_uuid();ct uuid=gen_random_uuid();body jsonb;ver timestamptz;free_ver timestamptz;a uuid;actor text;ws jsonb;
+begin
+ insert into respectlogistic_customers(id,inn,payload) values(c,substr(floor(random()*9000000000+1000000000)::bigint::text,1,10),jsonb_build_object('name','TRIP-TEST-CUSTOMER'));
+ insert into respectlogistic_contracts(id,customer_id,kind,number,date,payload) values(co,c,'transport','TRIP-TEST-'||substr(co::text,1,8),current_date,'{}');
+ insert into respectlogistic_specifications(id,customer_id,contract_id,number,date,payload) values(sp,c,co,'TRIP-SP-'||substr(sp::text,1,8),current_date,'{}');
+ insert into respectlogistic_services(id,customer_id,contract_id,specification_id,name,unit,price_kopecks) values(sv,c,co,sp,'Самосвал','м³',250000);
+ insert into respectlogistic_sites(id,customer_id,contract_id,specification_id,service_id,payload) values(s,c,co,sp,sv,'{"name":"TRIP-TEST-SITE","loadingAddress":"Погрузка А","address":"Выгрузка Б","routeKm":"120"}');
+ insert into crm_drivers(full_name,pay_rate_km,bonus_pct,tax_pct) values('TRIP-TEST-DRIVER',80,10,13) returning id into d;
+ insert into crm_vehicles(plate,assigned_driver_id) values('TRIP-TEST-'||substr(t::text,1,4),d) returning id into v;
+ body=jsonb_build_object('id',t,'customer_id',c,'site_id',s,'vehicle_id',v,'driver_id',d,'trip_date',current_date,'trip_number','','loading_address','Погрузка уточнённая','unloading_address','Выгрузка уточнённая','volume',12.5,'unit','м³','unit_price',2500,'service_name','Самосвал','status','assigned');
+ perform crm_save_trip(body,null);
+ if not exists(select 1 from crm_trips where id=t and volume=12.5 and loading_address='Погрузка уточнённая' and source_service_id=sv) then raise exception 'TEST: trip fields not saved';end if;
+ if not exists(select 1 from crm_customers where id=c) or not exists(select 1 from crm_sites where id=s and customer_id=c and route_km=120) then raise exception 'TEST: customer/site bridge missing';end if;
+ select modified_at into ver from crm_trips where id=t;
+ perform crm_save_trip(body||'{"volume":15}'::jsonb,ver);
+ begin
+  perform crm_save_trip(body,ver);
+  raise exception using message='TEST: stale edit accepted',errcode='P0002';
+ exception when sqlstate 'P0001' then null;end;
+ select modified_at into ver from crm_trips where id=t;
+ perform crm_save_trip(body||'{"volume":15,"status":"delivered"}'::jsonb,ver);
+ select id into a from crm_payroll_accruals where trip_id=t;
+ if not exists(select 1 from crm_payroll_accruals where id=a and base=9600 and bonus=960 and tax=1372.8) then raise exception 'TEST: payroll not linked';end if;
+ perform crm_pay_driver_accruals(array[a],'salary',100,current_date);
+ perform crm_save_trip(body||jsonb_build_object('id',free_trip),null);
+ select modified_at into free_ver from crm_trips where id=free_trip;
+ select modified_at into ver from crm_trips where id=t;
+ begin
+  perform crm_delete_trips(array[t,free_trip],jsonb_build_object(t::text,ver,free_trip::text,free_ver));
+  raise exception using message='TEST: paid trip deleted',errcode='P0002';
+ exception when sqlstate 'P0001' then null;end;
+ if exists(select 1 from crm_trips where id in (t,free_trip) and deleted_at is not null) then raise exception 'TEST: partial bulk deletion';end if;
+ perform crm_delete_trips(array[free_trip],jsonb_build_object(free_trip::text,free_ver));
+ if not exists(select 1 from crm_trips where id=free_trip and deleted_at is not null) then raise exception 'TEST: soft delete missing';end if;
+ insert into crm_carriers(name) values('TRIP-TEST-CARRIER') returning id into carrier;
+ insert into crm_vehicles(plate,carrier_id,is_subcontractor_vehicle) values('TRIP-TEST-EXTERNAL',carrier,true) returning id into cv;
+ perform crm_save_trip(body||jsonb_build_object('id',ct,'vehicle_id',cv,'driver_id','','status','delivered'),null);
+ if not exists(select 1 from crm_trips where id=ct and carrier_id=carrier) then raise exception 'TEST: contractor classification missing';end if;
+ if exists(select 1 from crm_payroll_accruals where trip_id=ct) then raise exception 'TEST: contractor created employee salary';end if;
+ ws=crm_read_trip_workspace();
+ if not (ws->'trips')@>jsonb_build_array(jsonb_build_object('id',t,'locked',true)) then raise exception 'TEST: locked trip not returned';end if;
+ if (ws->'trips')@>jsonb_build_array(jsonb_build_object('id',free_trip)) then raise exception 'TEST: deleted trip visible';end if;
+ actor=current_setting('request.jwt.claim.sub');perform set_config('request.jwt.claim.sub',gen_random_uuid()::text,true);
+ ws=crm_read_trip_workspace();if (ws->'trips')@>jsonb_build_array(jsonb_build_object('id',t)) then raise exception 'TEST: owner isolation failed';end if;
+ perform set_config('request.jwt.claim.sub',actor,true);
+end $$;
+rollback;
+select 'PASS: current customer/site bridge; create/edit; address snapshots; stale version rejection; employee payroll; atomic protected bulk delete; soft delete; contractor tagging without employee payroll; owner isolation. Test data rolled back.' as verification;
