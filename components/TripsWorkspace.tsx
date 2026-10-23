@@ -4,7 +4,7 @@ import {Plus,Search,RefreshCw,Download,Pencil,Trash2,Truck,Lock} from 'lucide-re
 import {db} from '../lib/supabase';
 import {Modal} from './Modal';
 import {TripDocuments,sendTripToDrive,type TripFile,type DriveExport} from './TripDocuments';
-import {blankTripFilter,filterTrips,toggleVisibleSelection,tripPeriod,volumeTotals,csvCell,type TripFilter,type TripRow} from '../lib/trips';
+import {blankTripFilter,tripVehicleChoices,filterTrips,toggleVisibleSelection,tripPeriod,volumeTotals,csvCell,type TripFilter,type TripRow} from '../lib/trips';
 type Customer={id:string;name:string};
 type Site={id:string;customer_id:string;name:string;loading_address:string;unloading_address:string;route_km:string|null;service_name:string|null;unit:string|null;unit_price:number|null;contract_number:string|null};
 type Vehicle={id:string;plate:string;brand:string|null;model:string|null;carrier_id:string|null;is_subcontractor_vehicle:boolean;assigned_driver_id:string|null;archived_at:string|null};
@@ -33,27 +33,32 @@ export function TripsWorkspace(){
  const allChecked=rows.length>0&&rows.every(t=>selected.includes(t.id)),someChecked=rows.some(t=>selected.includes(t.id));
  useEffect(()=>{if(selectAll.current)selectAll.current.indeterminate=someChecked&&!allChecked},[someChecked,allChecked]);
  const chosenVehicle=data.vehicles.find(v=>v.id===form.vehicle_id);
- const external=Boolean(chosenVehicle&&(chosenVehicle.carrier_id||chosenVehicle.is_subcontractor_vehicle));
+ const external=form.vehicle_source==='contractor';
  const selectedCarrier=chosenVehicle?.carrier_id||(external?form.carrier_id:'');
  const currentSites=data.sites.filter(s=>s.customer_id===form.customer_id);
  const filterSites=data.sites.filter(s=>!draft.customer||s.customer_id===draft.customer);
  const volume=volumeTotals(rows);
+ const vehicleChoices=tripVehicleChoices(data.vehicles,form.vehicle_source||'own',selectedCarrier||'',form.vehicle_id);
+ function chooseSource(source:string){setForm(p=>({...p,vehicle_source:source,vehicle_id:'',driver_id:'',carrier_id:''}))}
+ function chooseCarrier(carrier:string){setForm(p=>({...p,carrier_id:carrier,vehicle_id:'',driver_id:''}))}
  function set(key:string,value:string){setForm(p=>({...p,[key]:value}))}
  function newTrip(){
   setExpectedVersion(null);setError('');setNotice('');
-  setForm({id:crypto.randomUUID(),trip_number:'',trip_date:today(),customer_id:applied.customer,site_id:'',vehicle_id:'',driver_id:'',carrier_id:'',loading_address:'',unloading_address:'',volume:'',unit:'м³',unit_price:'0',service_name:'',status:'assigned'});
+  setForm({id:crypto.randomUUID(),trip_number:'',trip_date:today(),customer_id:applied.customer,site_id:'',vehicle_id:'',driver_id:'',carrier_id:'',vehicle_source:'own',loading_address:'',unloading_address:'',volume:'',unit:'м³',unit_price:'0',service_name:'',status:'assigned'});
   setModal('edit');
  }
  function editTrip(t:TripRow){
   if(t.locked){setError('Рейс включён в счёт или по нему уже есть выплаты/удержания. Для изменения нужна бухгалтерская корректировка.');return}
   setExpectedVersion(t.modified_at);setError('');setNotice('');
-  setForm(Object.fromEntries(Object.entries(t).map(([k,v])=>[k,v===null?'':String(v)])));setModal('edit');
+  const v=data.vehicles.find(v=>v.id===t.vehicle_id);
+  setForm({...Object.fromEntries(Object.entries(t).map(([k,v])=>[k,v===null?'':String(v)])),vehicle_source:t.carrier_id||v?.carrier_id||v?.is_subcontractor_vehicle?'contractor':'own'});setModal('edit');
  }
  function chooseSite(id:string){
   const s=data.sites.find(s=>s.id===id);setForm(p=>({...p,site_id:id,loading_address:s?.loading_address||'',unloading_address:s?.unloading_address||'',service_name:s?.service_name||'',unit:s?.unit||'м³',unit_price:String(s?.unit_price||0)}));
  }
  function chooseVehicle(id:string){
-  const v=data.vehicles.find(v=>v.id===id),carrier=v?.carrier_id||'';
+  const v=vehicleChoices.find(v=>v.id===id),carrier=v?.carrier_id||(external?form.carrier_id:'')||'';
+  if(id&&!v)return;
   const prior=data.drivers.find(d=>d.id===form.driver_id),assigned=data.drivers.find(d=>d.id===v?.assigned_driver_id&&!d.archived_at);
   setForm(p=>({...p,vehicle_id:id,carrier_id:carrier,driver_id:assigned&&assigned.carrier_id===v?.carrier_id?assigned.id:prior&&(prior.carrier_id||'')===carrier?prior.id:''}));
  }
@@ -62,10 +67,20 @@ export function TripsWorkspace(){
   try{
    const volume=Number(form.volume),price=Number(form.unit_price);
    if(form.volume===''||!Number.isFinite(volume)||volume<0||!Number.isFinite(price)||price<0)throw Error('Проверьте объём и цену');
+   if(!vehicleChoices.some(v=>v.id===form.vehicle_id))throw Error('Выберите машину для выбранного исполнителя');
+   if(external&&!selectedCarrier)throw Error('Выберите контрагента');
    const result=await db.rpc('crm_save_trip',{p_trip:{...form,volume,unit_price:price},p_expected_modified_at:expectedVersion});
    if(result.error)throw Error(result.error.message);
    setModal(null);setSelected([]);await reload();setNotice(expectedVersion?'Рейс изменён':'Рейс создан');
   }catch(e){setError((e as Error).message||'Не удалось сохранить рейс')}finally{setBusy(false)}
+ }
+ async function changeStatus(trip:TripRow,status:string){
+  if(!db||busy||status===trip.status)return;setBusy(true);setError('');setNotice('');
+  try{
+   const r=await db.rpc('crm_save_trip',{p_trip:{...trip,status},p_expected_modified_at:trip.modified_at});
+   if(r.error)throw Error(r.error.message);
+   await reload();setNotice('Рейс '+trip.trip_number+': '+statuses[status]);
+  }catch(e){setError((e as Error).message||'Не удалось изменить статус рейса')}finally{setBusy(false)}
  }
  async function remove(){
   if(!db||busy)return;setBusy(true);setError('');
@@ -82,7 +97,7 @@ export function TripsWorkspace(){
   const content='\ufeff'+[header,...lines].map(row=>row.map(csvCell).join(';')).join('\r\n');
   const url=URL.createObjectURL(new Blob([content],{type:'text/csv;charset=utf-8'})),link=document.createElement('a');link.href=url;link.download='Рейсы-'+today()+'.csv';link.click();setTimeout(()=>URL.revokeObjectURL(url),1000);
  }
- const input=(key:string,label:string,type='text',required=false)=><label className="field" key={key}>{label}{required?' *':''}<input type={type} required={required} value={form[key]||''} min={type==='number'?0:undefined} step={type==='number'?'0.001':undefined} placeholder={key==='trip_number'?'Автоматический номер':undefined} onChange={e=>set(key,e.target.value)}/></label>;
+ const input=(key:string,label:string,type='text',required=false)=><label className="field" key={key}>{label}{required?' *':''}<input type={type} required={required} value={form[key]||''} min={type==='number'?0:undefined} step={type==='number'?'0.001':undefined} placeholder={key==='trip_number'?'Автоматически: 1–1000':undefined} onChange={e=>set(key,e.target.value)}/></label>;
  return <section className="trips-workspace">
   <div className="page-heading"><div><span className="eyebrow">Операционная таблица</span><h1>Рейсы <span className="count-badge">{rows.length}</span></h1><p>Погрузка, выгрузка, техника и объёмы — в одной таблице.</p></div><div className="trip-heading-actions"><button className="button secondary" disabled={loading||!rows.length} onClick={exportCSV}><Download size={16}/>Выгрузить CSV</button><button className="button" onClick={newTrip}><Plus size={18}/>Добавить рейс</button></div></div>
   {rows.some(t=>!data.files.some(f=>f.trip_id===t.id))&&<div className="trip-alert" role="alert">Нет документов от водителя по рейсам: {rows.filter(t=>!data.files.some(f=>f.trip_id===t.id)).length}. Загрузите файлы в строке под рейсом.</div>}
@@ -105,7 +120,7 @@ export function TripsWorkspace(){
     <td className="trip-sticky-number"><strong>{t.trip_number}</strong>{t.locked&&<small className="trip-locked"><Lock size={11}/>Счёт / выплаты</small>}</td><td>{t.trip_date||'—'}</td><td>{t.loading_address||'—'}</td><td>{t.unloading_address||'—'}</td>
     <td><span className={'trip-plate '+(contractor?'contractor':'owned')}>{v?.plate||'Не указано'}</span><small>{contractor?'Контрагент':'Своя техника'}</small>{contractor&&carrierName&&<small>{carrierName}</small>}</td>
     <td><strong>{Number(t.volume||0).toLocaleString('ru-RU',{maximumFractionDigits:3})}</strong><small>{t.unit||'м³'}</small></td>
-    <td>{data.customers.find(c=>c.id===t.customer_id)?.name||'—'}</td><td>{data.sites.find(s=>s.id===t.site_id)?.name||'—'}</td><td>{data.drivers.find(d=>d.id===t.driver_id)?.full_name||'—'}</td><td>{t.service_name||'—'}</td><td>{money(Number(t.unit_price||0))}</td><td><strong>{money(Number(t.unit_price||0)*Number(t.volume||0))}</strong></td><td><span className={'trip-status '+(t.status==='delivered'&&(!t.documents_confirmed||!data.files.some(f=>f.trip_id===t.id))?'sent':t.status)}>{t.status==='delivered'&&!t.documents_confirmed?'Выполнен · нужны документы':statuses[t.status]||t.status}</span></td>
+    <td>{data.customers.find(c=>c.id===t.customer_id)?.name||'—'}</td><td>{data.sites.find(s=>s.id===t.site_id)?.name||'—'}</td><td>{data.drivers.find(d=>d.id===t.driver_id)?.full_name||'—'}</td><td>{t.service_name||'—'}</td><td>{money(Number(t.unit_price||0))}</td><td><strong>{money(Number(t.unit_price||0)*Number(t.volume||0))}</strong></td><td><span className={'trip-status '+(t.status==='delivered'&&(!t.documents_confirmed||!data.files.some(f=>f.trip_id===t.id))?'sent':t.status)}>{t.status==='delivered'&&!t.documents_confirmed?'Выполнен · нужны документы':statuses[t.status]||t.status}</span><select className="trip-status-select" aria-label={'Изменить статус рейса '+t.trip_number} value={t.status} disabled={busy||t.locked} onChange={e=>void changeStatus(t,e.target.value)} onDoubleClick={e=>e.stopPropagation()}>{Object.entries(statuses).map(([value,label])=><option key={value} value={value}>{label}</option>)}</select></td>
     <td><div className="trip-row-actions"><button className="icon-button" aria-label={'Редактировать '+t.trip_number} disabled={busy||t.locked} onClick={()=>editTrip(t)}><Pencil size={15}/></button><button className="icon-button trip-delete" aria-label={'Удалить '+t.trip_number} disabled={busy} onClick={()=>{setSelected([t.id]);setError('');setModal('delete')}}><Trash2 size={15}/></button></div></td>
    </tr><tr className="trip-documents-row"><td colSpan={15}><TripDocuments tripId={t.id} files={data.files.filter(f=>f.trip_id===t.id)} confirmed={Boolean(t.documents_confirmed)} completed={t.status==='delivered'} archive={data.exports.find(e=>e.trip_id===t.id)} onChanged={reload}/></td></tr></Fragment>})}</tbody>
   </table>{loading&&<div className="trip-table-empty">Загрузка рейсов…</div>}{!loading&&!rows.length&&<div className="trip-table-empty"><Truck size={30}/><strong>Рейсов пока нет</strong><p>Измените фильтр или добавьте первый рейс.</p><button className="button" onClick={newTrip}>Добавить рейс</button></div>}</div>
@@ -115,9 +130,10 @@ export function TripsWorkspace(){
    <label className="field">Заказчик *<select required value={form.customer_id||''} onChange={e=>setForm(p=>({...p,customer_id:e.target.value,site_id:'',loading_address:'',unloading_address:'',service_name:'',unit_price:'0'}))}><option value="">Выберите заказчика</option>{data.customers.map(c=><option key={c.id} value={c.id}>{c.name}</option>)}</select></label>
    <label className="field">Объект *<select required value={form.site_id||''} disabled={!form.customer_id} onChange={e=>chooseSite(e.target.value)}><option value="">Выберите объект</option>{currentSites.map(s=><option key={s.id} value={s.id}>{s.name}</option>)}</select></label>
    {input('loading_address','Адрес погрузки','text',true)}{input('unloading_address','Адрес выгрузки','text',true)}
-   <label className={'field '+(external?'trip-external-field':'')}>Госномер *<select required value={form.vehicle_id||''} onChange={e=>chooseVehicle(e.target.value)}><option value="">Выберите технику</option><optgroup label="Своя техника">{data.vehicles.filter(v=>!v.carrier_id&&!v.is_subcontractor_vehicle&&(!v.archived_at||v.id===form.vehicle_id)).map(v=><option key={v.id} value={v.id}>{v.plate} · {v.brand} {v.model}</option>)}</optgroup><optgroup label="Техника контрагентов">{data.vehicles.filter(v=>(v.carrier_id||v.is_subcontractor_vehicle)&&(!v.archived_at||v.id===form.vehicle_id)).map(v=><option key={v.id} value={v.id}>{v.plate} · Контрагент · {data.carriers.find(c=>c.id===v.carrier_id)?.name||v.brand}</option>)}</optgroup></select>{external&&<small className="trip-external-note">Техника контрагента</small>}</label>
-   <label className="field">Водитель<select value={form.driver_id||''} onChange={e=>set('driver_id',e.target.value)}><option value="">Не назначен</option>{data.drivers.filter(d=>(d.carrier_id||'')===(selectedCarrier||'')&&(!d.archived_at||d.id===form.driver_id)).map(d=><option key={d.id} value={d.id}>{d.full_name}</option>)}</select></label>
-   {external&&!chosenVehicle?.carrier_id&&<label className="field wide">Контрагент *<select required value={form.carrier_id||''} onChange={e=>setForm(p=>({...p,carrier_id:e.target.value,driver_id:''}))}><option value="">Выберите исполнителя</option>{data.carriers.filter(c=>!c.is_blocked).map(c=><option key={c.id} value={c.id}>{c.name}</option>)}</select></label>}
+   <fieldset className="trip-source-switch"><legend>Чья техника *</legend><div className="trip-source-options">{[['own','Своя техника'],['contractor','Техника контрагента']].map(([value,label])=><label key={value} className={'trip-source-option '+((form.vehicle_source||'own')===value?'chosen':'')}><input type="radio" name="trip-vehicle-source" value={value} checked={(form.vehicle_source||'own')===value} onChange={()=>chooseSource(value)}/><span>{label}</span></label>)}</div></fieldset>
+   {external&&<label className="field wide">Контрагент *<select required value={selectedCarrier||''} onChange={e=>chooseCarrier(e.target.value)}><option value="">Выберите исполнителя</option>{data.carriers.filter(c=>!c.is_blocked||c.id===selectedCarrier).map(c=><option key={c.id} value={c.id}>{c.name}{c.is_blocked?' · заблокирован':''}</option>)}</select>{!data.carriers.some(c=>!c.is_blocked)&&<small>Добавьте исполнителя в разделе «Контрагенты».</small>}</label>}
+   <label className={'field '+(external?'trip-external-field':'')}>Госномер *<select required disabled={external&&!selectedCarrier} value={form.vehicle_id||''} onChange={e=>chooseVehicle(e.target.value)}><option value="">{external&&!selectedCarrier?'Сначала выберите контрагента':vehicleChoices.length?'Выберите машину':'Нет добавленной техники'}</option>{vehicleChoices.map(v=><option key={v.id} value={v.id}>{v.plate} · {v.brand} {v.model}{v.archived_at?' · архив':''}</option>)}</select>{(!external||selectedCarrier)&&!vehicleChoices.length&&<small className="trip-vehicle-empty">{external?'Добавьте технику в карточку выбранного контрагента.':'Добавьте собственную машину в разделе «ТС и водители».'}</small>}{external&&<small className="trip-external-note">Техника контрагента</small>}</label>
+   <label className="field">Водитель<select value={form.driver_id||''} disabled={external&&!selectedCarrier} onChange={e=>set('driver_id',e.target.value)}><option value="">Не назначен</option>{data.drivers.filter(d=>(!external||Boolean(selectedCarrier))&&(d.carrier_id||'')===(selectedCarrier||'')&&(!d.archived_at||d.id===form.driver_id)).map(d=><option key={d.id} value={d.id}>{d.full_name}</option>)}</select></label>
    {input('volume','Объём','number',true)}<label className="field">Единица<select value={form.unit||'м³'} onChange={e=>set('unit',e.target.value)}>{Array.from(new Set(['м³','т','рейс','час','смена','км','шт.',form.unit].filter(Boolean))).map(u=><option key={u}>{u}</option>)}</select></label>
    {input('service_name','Услуга')}{input('unit_price','Цена за единицу, ₽','number')}
    <label className="field">Статус<select value={form.status||'assigned'} onChange={e=>set('status',e.target.value)}>{Object.entries(statuses).map(([k,v])=><option key={k} value={k}>{v}</option>)}</select></label>

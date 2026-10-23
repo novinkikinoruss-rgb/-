@@ -2,7 +2,7 @@ begin;
 select set_config('request.jwt.claim.sub',(select id::text from auth.users order by created_at limit 1),true) is not null as identity_ready;
 set local role authenticated;
 do $$
-declare c uuid=gen_random_uuid();co uuid=gen_random_uuid();sp uuid=gen_random_uuid();sv uuid=gen_random_uuid();s uuid=gen_random_uuid();d uuid;v uuid;carrier uuid;cv uuid;t uuid=gen_random_uuid();free_trip uuid=gen_random_uuid();ct uuid=gen_random_uuid();file_path text;file_id uuid;export_body jsonb;body jsonb;ver timestamptz;free_ver timestamptz;a uuid;actor text;ws jsonb;
+declare c uuid=gen_random_uuid();co uuid=gen_random_uuid();sp uuid=gen_random_uuid();sv uuid=gen_random_uuid();s uuid=gen_random_uuid();d uuid;v uuid;carrier uuid;cv uuid;t uuid=gen_random_uuid();free_trip uuid=gen_random_uuid();ct uuid=gen_random_uuid();number_value text;free_number text;file_path text;file_id uuid;export_body jsonb;body jsonb;ver timestamptz;free_ver timestamptz;a uuid;actor text;ws jsonb;
 begin
  insert into respectlogistic_customers(id,inn,payload) values(c,substr(floor(random()*9000000000+1000000000)::bigint::text,1,10),jsonb_build_object('name','TRIP-TEST-CUSTOMER'));
  insert into respectlogistic_contracts(id,customer_id,kind,number,date,payload) values(co,c,'transport','TRIP-TEST-'||substr(co::text,1,8),current_date,'{}');
@@ -14,6 +14,22 @@ begin
  body=jsonb_build_object('id',t,'customer_id',c,'site_id',s,'vehicle_id',v,'driver_id',d,'trip_date',current_date,'trip_number','','loading_address','Погрузка уточнённая','unloading_address','Выгрузка уточнённая','volume',12.5,'unit','м³','unit_price',2500,'service_name','Самосвал','status','assigned');
  perform crm_save_trip(body,null);
  if not exists(select 1 from crm_trips where id=t and volume=12.5 and loading_address='Погрузка уточнённая' and source_service_id=sv) then raise exception 'TEST: trip fields not saved';end if;
+
+ select trip_number into number_value from crm_trips where id=t;
+ if number_value !~ '^[1-9][0-9]{0,3}$' or number_value::integer>1000 then raise exception 'TEST: automatic number is not short';end if;
+ insert into crm_trips(customer_id,site_id,vehicle_id,trip_number,trip_date,status) values(c,s,v,number_value,current_date,'assigned');
+ begin
+  perform crm_save_trip(body||jsonb_build_object('id',gen_random_uuid(),'trip_number',number_value),null);
+  raise exception using message='TEST: duplicate manual number accepted',errcode='P0002';
+ exception when sqlstate 'P0001' then null;end;
+ begin
+  perform crm_save_trip(body||jsonb_build_object('id',gen_random_uuid(),'trip_number','1001'),null);
+  raise exception using message='TEST: number outside range accepted',errcode='P0002';
+ exception when sqlstate 'P0001' then null;end;
+ begin
+  perform crm_save_trip(body||jsonb_build_object('id',gen_random_uuid(),'vehicle_source','contractor'),null);
+  raise exception using message='TEST: wrong vehicle source accepted',errcode='P0002';
+ exception when sqlstate 'P0001' then null;end;
  if not exists(select 1 from crm_customers where id=c) or not exists(select 1 from crm_sites where id=s and customer_id=c and route_km=120) then raise exception 'TEST: customer/site bridge missing';end if;
  select modified_at into ver from crm_trips where id=t;
  perform crm_save_trip(body||'{"volume":15}'::jsonb,ver);
@@ -27,7 +43,7 @@ begin
  if not exists(select 1 from crm_payroll_accruals where id=a and base=9600 and bonus=960 and tax=1372.8) then raise exception 'TEST: payroll not linked';end if;
  perform crm_pay_driver_accruals(array[a],'salary',100,current_date);
  perform crm_save_trip(body||jsonb_build_object('id',free_trip),null);
- select modified_at into free_ver from crm_trips where id=free_trip;
+ select modified_at,trip_number into free_ver,free_number from crm_trips where id=free_trip;
  select modified_at into ver from crm_trips where id=t;
  begin
   perform crm_delete_trips(array[t,free_trip],jsonb_build_object(t::text,ver,free_trip::text,free_ver));
@@ -36,6 +52,10 @@ begin
  if exists(select 1 from crm_trips where id in (t,free_trip) and deleted_at is not null) then raise exception 'TEST: partial bulk deletion';end if;
  perform crm_delete_trips(array[free_trip],jsonb_build_object(free_trip::text,free_ver));
  if not exists(select 1 from crm_trips where id=free_trip and deleted_at is not null) then raise exception 'TEST: soft delete missing';end if;
+ begin
+  perform crm_save_trip(body||jsonb_build_object('id',gen_random_uuid(),'trip_number',free_number),null);
+  raise exception using message='TEST: deleted number reused',errcode='P0002';
+ exception when sqlstate 'P0001' then null;end;
  insert into rl_crm_carriers(name) values('TRIP-TEST-CARRIER') returning id into carrier;
  insert into rl_crm_vehicles(plate,carrier_id,is_subcontractor_vehicle) values('TRIP-TEST-EXTERNAL',carrier,true) returning id into cv;
  perform crm_save_trip(body||jsonb_build_object('id',ct,'vehicle_id',cv,'driver_id','','status','delivered'),null);

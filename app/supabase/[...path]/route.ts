@@ -34,8 +34,8 @@ async function forward(request:Request,context:Context){
     if(body&&body.byteLength>(storage?11534336:1048576))return Response.json({message:'Слишком большой запрос'},{status:413});
     const upstream=await fetch(destination,{method:request.method,headers,body,signal:controller.signal,cache:'no-store',redirect:'error'});
     const result=await upstream.arrayBuffer();
-    const responseHeaders=new Headers({'Cache-Control':'no-store, private'});
-    for(const name of ['content-type','content-range','preference-applied','retry-after']){const value=upstream.headers.get(name);if(value)responseHeaders.set(name,value);}
+    const responseHeaders=new Headers({'Cache-Control':'no-store, private','X-Content-Type-Options':'nosniff'});
+    for(const name of ['content-type','content-range','content-disposition','preference-applied','retry-after']){const value=upstream.headers.get(name);if(value)responseHeaders.set(name,value);}
     return new Response([204,205,304].includes(upstream.status)?null:result,{status:upstream.status,headers:responseHeaders});
   }catch{
     return Response.json({message:controller.signal.aborted?'Сервис входа не ответил вовремя':'Не удалось связаться с сервисом входа',code:controller.signal.aborted?'upstream_timeout':'service_unavailable'},{status:controller.signal.aborted?504:502,headers:{'Cache-Control':'no-store'}});

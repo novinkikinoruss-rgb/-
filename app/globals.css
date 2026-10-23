@@ -213,6 +213,11 @@
 .trip-success{padding:13px 17px;border-radius:12px;background:#eaf4df;color:#58773d;margin:15px 0;font-size:12px}
 .trip-external-field select{border-color:#ddb36b;background:#fffaf0}
 .trip-external-note{font-size:10px;color:#a67531}
+.trip-status-select{display:block;width:100%;min-height:36px;margin-top:9px;padding:7px 5px;border:1px solid #d9e3d0;border-radius:8px;background:white;font-size:11px;color:#596e48;cursor:pointer}.trip-status-select:disabled{cursor:not-allowed;opacity:.6}
+.trip-source-switch{grid-column:1/-1;padding:0}.trip-source-switch legend{font-size:10px;color:#849275;margin-bottom:9px}
+.trip-source-options{display:grid;grid-template-columns:1fr 1fr;gap:10px}.trip-source-option{display:flex;align-items:center;gap:10px;min-height:48px;padding:12px;border:1px solid #dfe7d7;border-radius:12px;background:white;color:#718263;font-size:12px;cursor:pointer;overflow-wrap:anywhere}
+.trip-source-option.chosen{background:#eff7e1;border-color:#a8c178;color:#4d6835}.trip-source-option:focus-within{outline:3px solid #b8ce924d;outline-offset:2px}.trip-source-option input{width:17px;height:17px;flex-shrink:0;accent-color:#8aaa59;margin:0}.trip-vehicle-empty{line-height:1.7;color:#92733f}
+@media(max-width:420px){.trip-source-options{grid-template-columns:1fr}}
 .trip-form-total{background:#edf5e2;border-radius:12px;padding:13px;align-self:end}
 .trip-form-total small{display:block;color:#8a9c78;font-size:10px;margin-bottom:8px}
 .trip-form-total strong{font-size:20px;color:#5a783d}

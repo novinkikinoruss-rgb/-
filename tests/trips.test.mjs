@@ -1,12 +1,20 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {blankTripFilter,filterTrips,toggleVisibleSelection,tripPeriod,volumeTotals,csvCell} from '../lib/trips.ts';
+import {blankTripFilter,tripVehicleChoices,filterTrips,toggleVisibleSelection,tripPeriod,volumeTotals,csvCell} from '../lib/trips.ts';
 const rows=[
  {id:'1',trip_number:'Р-1',trip_date:'2026-10-01',customer_id:'a',site_id:'x',vehicle_id:'v1',loading_address:'Москва',unloading_address:'Север',volume:12.5,unit:'м³'},
  {id:'2',trip_number:'Р-2',trip_date:'2026-10-10',customer_id:'a',site_id:'y',vehicle_id:'v2',loading_address:'Юг',unloading_address:'Север',volume:2,unit:'т'},
  {id:'3',trip_number:'Р-3',trip_date:'2026-10-10',customer_id:'b',site_id:'z',vehicle_id:'v3',loading_address:'Запад',unloading_address:'Центр',volume:7.25,unit:'м³'},
  {id:'4',trip_number:'Без даты',trip_date:null,customer_id:'b',site_id:'z',volume:1,unit:'рейс'}
 ];
+test('vehicle selection separates company and carrier fleets and preserves only the current archived vehicle',()=>{
+ const vehicles=[{id:'own',carrier_id:null,is_subcontractor_vehicle:false,archived_at:null},{id:'carrier-a',carrier_id:'a',is_subcontractor_vehicle:true,archived_at:null},{id:'carrier-b',carrier_id:'b',is_subcontractor_vehicle:true,archived_at:null},{id:'archived',carrier_id:null,is_subcontractor_vehicle:false,archived_at:'2026-10-01'}];
+ assert.deepEqual(tripVehicleChoices(vehicles,'own','').map(v=>v.id),['own']);
+ assert.deepEqual(tripVehicleChoices(vehicles,'contractor','a').map(v=>v.id),['carrier-a']);
+ assert.deepEqual(tripVehicleChoices(vehicles,'contractor','').map(v=>v.id),[]);
+ assert.deepEqual(tripVehicleChoices(vehicles,'own','','archived').map(v=>v.id),['own','archived']);
+ assert.deepEqual(tripVehicleChoices([],'contractor','a'),[]);
+});
 test('period boundaries customer and object filters compose',()=>{
  assert.deepEqual(filterTrips(rows,{...blankTripFilter,from:'2026-10-01',to:'2026-10-10',customer:'a'}).map(t=>t.id),['1','2']);
  assert.deepEqual(filterTrips(rows,{...blankTripFilter,from:'2026-10-10',to:'2026-10-10',site:'z'}).map(t=>t.id),['3']);

@@ -1,6 +1,10 @@
 export type TripRow={id:string;trip_number:string;trip_date:string|null;customer_id:string|null;site_id:string|null;vehicle_id:string|null;driver_id:string|null;carrier_id:string|null;loading_address:string;unloading_address:string;volume:number;unit:string;unit_price:number;service_name:string|null;status:string;modified_at:string;locked:boolean;documents_confirmed?:boolean};
 export type TripFilter={from:string;to:string;customer:string;site:string;search:string};
 export const blankTripFilter:TripFilter={from:'',to:'',customer:'',site:'',search:''};
+export type TripVehicleChoice={id:string;carrier_id:string|null;is_subcontractor_vehicle:boolean;archived_at:string|null};
+export function tripVehicleChoices<T extends TripVehicleChoice>(vehicles:T[],source:string,carrier:string,currentId=''){
+ return vehicles.filter(v=>(!v.archived_at||v.id===currentId)&&(source==='contractor'?Boolean(carrier&&(v.carrier_id===carrier||!v.carrier_id&&v.is_subcontractor_vehicle)):!v.carrier_id&&!v.is_subcontractor_vehicle));
+}
 export function filterTrips(rows:TripRow[],filter:TripFilter,vehicleNames:Record<string,string>={}){
  const query=filter.search.trim().toLocaleLowerCase('ru-RU');
  return rows.filter(t=>(!filter.from||Boolean(t.trip_date&&t.trip_date>=filter.from))&&(!filter.to||Boolean(t.trip_date&&t.trip_date<=filter.to))&&(!filter.customer||t.customer_id===filter.customer)&&(!filter.site||t.site_id===filter.site)&&(!query||[t.trip_number,t.loading_address,t.unloading_address,vehicleNames[t.vehicle_id||'']].join(' ').toLocaleLowerCase('ru-RU').includes(query)));
