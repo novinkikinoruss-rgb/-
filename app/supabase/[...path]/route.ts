@@ -6,7 +6,7 @@ type Context={params:Promise<{path:string[]}>};
 async function forward(request:Request,context:Context){
   const {path}=await context.params;
   const auth=path[0]==='auth'&&path[1]==='v1';
-  const rpc=path[0]==='rest'&&path[1]==='v1'&&path[2]==='rpc'&&['respectlogistic_read_workspace','respectlogistic_customer_action','crm_prepare_payroll','crm_pay_driver_accruals','crm_apply_driver_fines','crm_complete_fleet_maintenance'].includes(path[3])&&path.length===4;
+  const rpc=path[0]==='rest'&&path[1]==='v1'&&path[2]==='rpc'&&['respectlogistic_read_workspace','respectlogistic_customer_action','crm_prepare_payroll','crm_pay_driver_accruals','crm_apply_driver_fines','crm_complete_fleet_maintenance','crm_read_trip_workspace','crm_save_trip','crm_delete_trips'].includes(path[3])&&path.length===4;
   const tables=['crm_carriers','crm_vehicles','crm_drivers','crm_trips','crm_sites','crm_documents','crm_counterparty_invoices','crm_counterparty_contracts','crm_counterparty_specifications','crm_driver_fines','crm_payroll_accruals','crm_payroll_payments','crm_payroll_deductions','crm_fleet_maintenance'];
   const table=path[0]==='rest'&&path[1]==='v1'&&path.length===3&&tables.includes(path[2])&&['GET','HEAD','POST','PATCH'].includes(request.method);
   if((!auth&&!rpc&&!table)||path.some(part=>!/^[a-zA-Z0-9_-]+$/.test(part)))return Response.json({message:'Endpoint not available'},{status:404});
