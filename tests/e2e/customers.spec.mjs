@@ -1,5 +1,6 @@
 import {test,expect} from '@playwright/test';
-async function ready(page){await page.goto('/');await expect(page.getByRole('heading',{name:'ООО «Стройресурс»',exact:true}).first()).toBeVisible();}
+async function openCustomers(page){const menu=page.getByRole('button',{name:'Открыть меню',exact:true});if(await menu.isVisible())await menu.click();await page.locator('.sidebar .nav-item').filter({hasText:'Заказчики'}).click();}
+async function ready(page){await page.goto('/');await openCustomers(page);await expect(page.getByRole('heading',{name:'ООО «Стройресурс»',exact:true}).first()).toBeVisible();}
 async function save(page){await page.getByRole('dialog').getByRole('button',{name:'Сохранить',exact:true}).click();await expect(page.getByRole('dialog')).toHaveCount(0);}
 test('Карточка по макету, папки и честный статус подключений',async({page},testInfo)=>{
  await ready(page);await page.getByRole('button',{name:'Сайт работает · деморежим'}).click();await expect(page.getByLabel('Состояние подключений').getByText('Не настроено',{exact:true})).toHaveCount(2);
@@ -20,7 +21,7 @@ test('Вся цепочка: заказчик → договор → услуг�
  await page.getByRole('button',{name:'Создать объект',exact:true}).click();
  await page.getByLabel('Название объекта').fill('ЖК «Новый»');await page.getByLabel('Адрес объекта').fill('Москва, тестовый адрес');await page.getByLabel('Ответственный прораб').fill('Петров Иван');await page.getByLabel('Расстояние в одну сторону').fill('52,5');await save(page);
  await expect(page.getByText('ЖК «Новый»',{exact:true}).first()).toBeVisible();await expect(page.getByText('Петров Иван',{exact:true})).toBeVisible();
- await page.reload();await expect(page.getByRole('button',{name:/ООО «Тестовая компания»/})).toBeVisible();await page.getByRole('button',{name:/ООО «Тестовая компания»/}).click();await page.getByRole('tab',{name:'Документы',exact:true}).click();
+ await page.reload();await openCustomers(page);await expect(page.getByRole('button',{name:/ООО «Тестовая компания»/})).toBeVisible();await page.getByRole('button',{name:/ООО «Тестовая компания»/}).click();await page.getByRole('tab',{name:'Документы',exact:true}).click();
  await expect(page.getByRole('button',{name:/Карточка объекта «ЖК «Новый»»/})).toBeVisible();
  await page.getByRole('tab',{name:'История',exact:true}).click();await expect(page.getByText('Создан объект «ЖК «Новый»»',{exact:true})).toBeVisible();
 });
