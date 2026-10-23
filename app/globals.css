@@ -166,3 +166,60 @@
 @media(max-width:1100px){.fleet-workspace .customer-workspace{grid-template-columns:200px minmax(0,1fr)}.fleet-calc-params{grid-template-columns:1fr 1fr}.fleet-maintenance{grid-template-columns:1fr}.fleet-filter{grid-template-columns:1fr 1fr}.fleet-document-cards{grid-template-columns:1fr}}
 @media(max-width:720px){.fleet-workspace .customer-workspace{grid-template-columns:1fr}.fleet-workspace .customer-directory{position:static;max-height:260px;overflow:auto}.fleet-workspace .detail-title,.fleet-workspace .page-heading{flex-wrap:wrap;align-items:flex-start}.fleet-totals{grid-template-columns:1fr 1fr}.fleet-filter{grid-template-columns:1fr}.fleet-photo{height:220px}.fleet-workspace .block-heading{flex-wrap:wrap}.fleet-workspace .workspace-toolbar{flex-wrap:wrap}.fleet-workspace .requisite-grid>div{grid-template-columns:100px minmax(0,1fr)}}
 @media(max-width:420px){.fleet-totals{grid-template-columns:1fr}.fleet-calc-params{grid-template-columns:1fr}}
+
+/* Trips occupy the full available work area, with spreadsheet scrolling only inside the grid. */
+.content.trips-content{max-width:none}
+.trips-workspace{min-width:0;width:100%}
+.trip-heading-actions,.trip-toolbar-actions,.trip-filter-buttons,.trip-row-actions{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.trip-filter{display:grid;grid-template-columns:minmax(145px,.8fr) minmax(130px,.7fr) minmax(130px,.7fr) minmax(180px,1.2fr) minmax(180px,1.2fr) auto;gap:16px;align-items:end;margin-bottom:18px;padding:20px}
+.trip-filter .field{min-width:0}
+.trip-filter .field select{max-width:100%}
+.trip-filter .trip-search{grid-column:1/-1;max-width:510px;width:100%;margin:0}
+.trip-table-toolbar{display:flex;align-items:center;gap:18px;flex-wrap:wrap;padding:4px 2px 16px}
+.trip-select-all{display:flex;align-items:center;gap:9px;font-size:12px;color:#657755}
+.trip-select-all input,.trip-sheet input[type=checkbox]{width:17px;height:17px;accent-color:#8aaa59;cursor:pointer}
+.trip-selection-count{font-size:12px;color:var(--muted)}
+.trip-toolbar-actions{margin-left:auto}
+.trip-toolbar-actions .button{font-size:11px;padding:10px 12px}
+.trip-delete{color:#a25c48!important}
+.trip-sheet{width:100%;max-height:calc(100dvh - 360px);min-height:330px;overflow:auto;border:1px solid #d9e2d0;border-radius:15px;background:#fff;box-shadow:0 10px 30px #29432b08;isolation:isolate}
+.trip-sheet table{width:100%;min-width:2440px;table-layout:fixed;border-collapse:separate;border-spacing:0;font-size:12px;font-variant-numeric:tabular-nums}
+.trip-sheet th{position:sticky;top:0;z-index:3;background:#eff4e8;color:#748666;font-size:10px;letter-spacing:.2px;font-weight:600;padding:16px 12px;border-right:1px solid #dce4d2;border-bottom:1px solid #d3dfc6;white-space:normal}
+.trip-sheet td{padding:13px 12px;vertical-align:top;border-right:1px solid #e5ebdd;border-bottom:1px solid #e5ebdd;background:white;overflow-wrap:anywhere;line-height:1.65}
+.trip-sheet td strong{font-size:12px;font-weight:600}
+.trip-sheet td small{display:block;color:#8a9781;font-size:10px;margin-top:6px;line-height:1.5}
+.trip-sheet tr:nth-child(even) td{background:#fafcf7}
+.trip-sheet tbody tr:hover td{background:#f0f6e7}
+.trip-sheet tbody tr.trip-selected td{background:#edf6dd}
+.trip-sheet .trip-sticky-check{position:sticky;left:0;z-index:2;text-align:center;padding-left:10px;padding-right:10px}
+.trip-sheet .trip-sticky-number{position:sticky;left:46px;z-index:2;box-shadow:3px 0 6px #31452e07}
+.trip-sheet th.trip-sticky-check,.trip-sheet th.trip-sticky-number{z-index:5;background:#eff4e8}
+.trip-plate{display:inline-flex;padding:6px 9px;border-radius:8px;font-weight:700;font-size:12px;white-space:nowrap;letter-spacing:.5px}
+.trip-plate.owned{background:#e8f1de;color:#56773c;border:1px solid #d9e6c8}
+.trip-plate.contractor{background:#fff0d4;color:#9b6822;border:1px solid #efd7a8}
+.trip-row-actions{flex-wrap:nowrap;gap:8px}
+.trip-row-actions .icon-button{width:32px;height:32px}
+.trip-status{display:inline-flex;font-size:10px;border-radius:8px;padding:6px 9px;background:#edf0f2;color:#7b8791;white-space:nowrap}
+.trip-status.delivered{background:#e1f1d8;color:#547c3b}
+.trip-status.sent{background:#fff0cb;color:#927127}
+.trip-status.cancelled{background:#ffe5df;color:#a36652}
+.trip-locked{display:flex!important;align-items:center;gap:4px;color:#a58c69!important}
+.trip-table-empty{display:flex;flex-direction:column;align-items:center;gap:17px;color:var(--muted);padding:65px 20px;font-size:13px;position:sticky;left:0;max-width:100%}
+.trip-table-empty p{font-size:12px}
+.trip-sheet-footer{display:flex;align-items:center;gap:25px;flex-wrap:wrap;padding:17px 4px;font-size:12px;color:#7f8d73}
+.trip-sheet-footer strong{color:#5e7549}
+.trip-footer-hint{margin-left:auto;font-size:10px;color:#a0ab96}
+.trip-alert{padding:15px 18px;background:#fff0e8;border:1px solid #e7c8b9;color:#965d46;border-radius:14px;margin:15px 0;font-size:12px;line-height:1.7;overflow-wrap:anywhere}
+.trip-success{padding:13px 17px;border-radius:12px;background:#eaf4df;color:#58773d;margin:15px 0;font-size:12px}
+.trip-external-field select{border-color:#ddb36b;background:#fffaf0}
+.trip-external-note{font-size:10px;color:#a67531}
+.trip-form-total{background:#edf5e2;border-radius:12px;padding:13px;align-self:end}
+.trip-form-total small{display:block;color:#8a9c78;font-size:10px;margin-bottom:8px}
+.trip-form-total strong{font-size:20px;color:#5a783d}
+.trip-delete-description{font-size:13px;line-height:1.9;color:#7a886e}
+.trip-delete-list{font-size:12px;line-height:2;color:#71855e;padding-left:20px;margin:20px 0}
+.trip-danger-button{background:#f3d8cd;color:#984f39}
+@media(min-width:1800px){.trip-sheet{min-height:500px}}
+@media(max-width:1350px){.trip-filter{grid-template-columns:repeat(3,minmax(0,1fr))}.trip-filter-buttons{align-self:end}}
+@media(max-width:900px){.trips-workspace .page-heading{align-items:flex-start;flex-wrap:wrap}.trip-filter{grid-template-columns:repeat(2,minmax(0,1fr))}.trip-sheet{max-height:65dvh;min-height:360px}.trip-toolbar-actions{margin-left:0}.trip-table-toolbar{gap:12px}.trip-sheet-footer{gap:14px}.trip-footer-hint{margin-left:0;width:100%}}
+@media(max-width:540px){.trip-filter{grid-template-columns:1fr 1fr;gap:14px;padding:17px}.trip-filter .field:nth-child(1),.trip-filter .field:nth-child(4),.trip-filter .field:nth-child(5){grid-column:1/-1}.trip-filter .field:nth-child(2){grid-column:1}.trip-filter .field:nth-child(3){grid-column:2;grid-row:2}.trip-filter-buttons{grid-column:1/-1}.trip-toolbar-actions{gap:8px}.trip-sheet th{padding:12px 9px}.trip-heading-actions{width:100%}.trip-heading-actions .button{font-size:11px}}
