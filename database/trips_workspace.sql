@@ -51,6 +51,7 @@ begin
  if jsonb_typeof(p_trip) is distinct from 'object' or length(p_trip::text)>30000 then raise exception 'Некорректный запрос';end if;
  if volume_value is null or volume_value<0 or volume_value::text in ('NaN','Infinity','-Infinity') or price_value<0 or price_value::text in ('NaN','Infinity','-Infinity') then raise exception 'Объём и цена должны быть неотрицательными числами';end if;
  if status_value not in ('assigned','sent','delivered','cancelled') then raise exception 'Выберите статус рейса';end if;
+ if status_value='delivered' and date_value>current_date then raise exception 'Выполненный рейс не может иметь будущую дату';end if;
  if origin_value='' or destination_value='' or greatest(length(origin_value),length(destination_value))>4000 then raise exception 'Заполните адреса погрузки и выгрузки';end if;
  perform pg_advisory_xact_lock(hashtextextended(actor::text||'-trips',0));
  select * into old_trip from crm_trips where id=tid and owner_id=actor for update;
@@ -92,8 +93,11 @@ begin
  if number_value='' then
   if old_trip.id is not null then number_value=old_trip.trip_number;
   else
-   insert into crm_trip_counters(owner_id,counter_date,value) values(actor,date_value,1) on conflict(owner_id,counter_date) do update set value=crm_trip_counters.value+1 returning value into n;
-   number_value='Р-'||to_char(date_value,'YYYYMMDD')||'-'||lpad(n::text,4,'0');
+   loop
+    insert into crm_trip_counters(owner_id,counter_date,value) values(actor,date_value,1) on conflict(owner_id,counter_date) do update set value=crm_trip_counters.value+1 returning value into n;
+    number_value='Р-'||to_char(date_value,'YYYYMMDD')||'-'||lpad(n::text,4,'0');
+    exit when not exists(select 1 from crm_trips where owner_id=actor and trip_number=number_value and deleted_at is null);
+   end loop;
   end if;
  end if;
  if length(number_value)>100 then raise exception 'Номер рейса слишком длинный';end if;
