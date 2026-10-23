@@ -12,9 +12,9 @@ const inDates=(date:string,f:ProfitFilter)=>(!f.from||date>=f.from)&&(!f.to||dat
 const inContext=(customer:string|null,site:string|null,service:string|null,f:ProfitFilter)=>(!f.customer||customer===f.customer)&&(!f.site||site===f.site)&&(!f.service||(service||'').trim()===f.service);
 // Largest remainders keep allocated payments equal to the invoice payment down to one kopeck.
 export function allocatePaid(total:number,weights:number[]){
- const weight=sum(weights);if(total<0||weights.some(v=>v<0)||total>weight)throw Error('Оплата превышает сумму расходов');if(!weight)return weights.map(()=>0);
- const raw=weights.map(v=>total*v/weight),result=raw.map(Math.floor);let left=total-sum(result);
- for(const i of raw.map((v,i)=>({i,remainder:v-result[i]})).sort((a,b)=>b.remainder-a.remainder||a.i-b.i)){if(left--<=0)break;result[i.i]++}return result;
+ const weight=sum(weights);if(!Number.isSafeInteger(total)||!Number.isSafeInteger(weight)||total<0||weights.some(v=>!Number.isSafeInteger(v)||v<0)||total>weight)throw Error('Оплата превышает сумму расходов или сумма некорректна');if(!weight)return weights.map(()=>0);
+ const denominator=BigInt(weight),scaled=weights.map(v=>BigInt(total)*BigInt(v)),result=scaled.map(v=>Number(v/denominator));let left=total-sum(result);
+ for(const i of scaled.map((v,i)=>({i,remainder:v%denominator})).sort((a,b)=>a.remainder>b.remainder?-1:a.remainder<b.remainder?1:a.i-b.i)){if(left--<=0)break;result[i.i]++}return result;
 }
 export function vatFromGross(gross:number,rate:number){if(!Number.isFinite(rate)||rate<0||rate>100)throw Error('Некорректная ставка НДС');return Math.round(gross*rate/(100+rate))}
 export function tripEarnings(trip:ProfitTrip,settings:ProfitData['settings']){
