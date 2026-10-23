@@ -31,7 +31,7 @@ export function FleetWorkspace(){
     db.from('crm_drivers').select('*').is('carrier_id',null).order('full_name'),
     db.from('crm_vehicles').select('*').is('carrier_id',null).eq('is_subcontractor_vehicle',false).order('plate'),
     db.from('crm_trips').select('id,trip_number,trip_date,driver_id,vehicle_id,site_id,order_id,status,service_name,volume,unit_price').is('deleted_at',null).order('trip_date',{ascending:false}),
-    db.rpc('crm_read_trip_workspace').then(r=>({data:r.data?.sites||[],error:r.error})),
+    db.rpc('crm_read_trip_workspace').then(r=>({data:(r.data?.sites||[]) as Site[],error:r.error})),
     db.from('crm_driver_fines').select('id,driver_id,trip_id,fine_date,amount,reason,paid').is('deleted_at',null).order('fine_date',{ascending:false}),
     db.from('crm_payroll_accruals').select('*').eq('active',true),
     db.from('crm_payroll_payments').select('*'),

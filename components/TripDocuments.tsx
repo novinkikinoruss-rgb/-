@@ -25,21 +25,22 @@ export function TripDocuments({tripId,files,confirmed,completed,archive,onChange
   }catch(e){setError((e as Error).message);if(uploadedPath&&!registered)await db.storage.from('respectlogistic-trip-documents').remove([uploadedPath])}finally{setBusy(false)}
  }
  async function open(file:TripFile){
-  if(!db)return;setError('');const r=await db.storage.from('respectlogistic-trip-documents').createSignedUrl(file.storage_path,300);
-  if(r.error)setError(r.error.message);else window.open(r.data.signedUrl,'_blank','noopener,noreferrer');
+  if(!db)return;setError('');const tab=window.open('about:blank','_blank');if(tab)tab.opener=null;const r=await db.storage.from('respectlogistic-trip-documents').createSignedUrl(file.storage_path,300);
+  if(r.error){tab?.close();setError(r.error.message)}else if(tab)tab.location.href=r.data.signedUrl;else setError('Разрешите открытие документов в новой вкладке');
  }
  async function confirm(){
   if(!db||busy)return;setBusy(true);setError('');
   try{const r=await db.rpc('respectlogistic_confirm_trip_documents',{p_trip_id:tripId});if(r.error)throw Error(r.error.message);await onChanged();if(completed){await sendTripToDrive(tripId);await onChanged()}}
   catch(e){setError((e as Error).message)}finally{setBusy(false)}
  }
+ async function retry(){setBusy(true);setError('');try{await sendTripToDrive(tripId);await onChanged()}catch(e){setError((e as Error).message)}finally{setBusy(false)}}
  return <div className="trip-document-strip">
   <span className={'document-badge '+(!files.length?'missing':confirmed?'complete':'partial')}>{!files.length?'Нет документов от водителя':confirmed?'Комплект подтверждён':'Проверьте комплект документов'}</span>
   <div className="trip-document-files">{files.map(f=><button className="text-button" key={f.id} title={documentKinds[f.doc_type]} onClick={()=>void open(f)}>{f.file_name}</button>)}</div>
   <select aria-label="Тип документа" value={kind} disabled={busy} onChange={e=>setKind(e.target.value)}>{Object.entries(documentKinds).map(([k,v])=><option key={k} value={k}>{v}</option>)}</select>
   <label className={'button secondary compact '+(busy?'disabled':'')}>{busy?'Обработка…':'Загрузить документ'}<input className="trip-file-input" type="file" disabled={busy} accept="application/pdf,image/jpeg,image/png,image/webp" onChange={e=>{const f=e.target.files?.[0];e.target.value='';if(f)void upload(f)}}/></label>
   {!!files.length&&!confirmed&&<button className="button secondary compact" disabled={busy} onClick={()=>void confirm()}>Комплект полный</button>}
-  {confirmed&&completed&&<span className="trip-archive-status">{archive?.state==='complete'&&archive.folder_url?<a href={archive.folder_url} target="_blank" rel="noreferrer">Документы на Google Диске ↗</a>:archive?.state==='awaiting_connection'?'Google Диск: ожидается подключение':archive?.state==='error'?'Ошибка отправки на Диск':archive?.state==='processing'?'Отправка на Диск…':'В очереди на Google Диск'}{archive?.error&&<small>{archive.error}</small>}{['error','pending'].includes(archive?.state||'pending')&&<button className="text-button" disabled={busy} onClick={async()=>{setBusy(true);try{await sendTripToDrive(tripId);await onChanged()}catch(e){setError((e as Error).message)}finally{setBusy(false)}}>Отправить</button>}</span>}
+  {confirmed&&completed&&<span className="trip-archive-status">{archive?.state==='complete'&&archive.folder_url?<a href={archive.folder_url} target="_blank" rel="noreferrer">Документы на Google Диске ↗</a>:archive?.state==='awaiting_connection'?'Google Диск: ожидается подключение':archive?.state==='error'?'Ошибка отправки на Диск':archive?.state==='processing'?'Отправка на Диск…':'В очереди на Google Диск'}{archive?.error&&<small>{archive.error}</small>}{['error','pending'].includes(archive?.state||'pending')&&<button className="text-button" disabled={busy} onClick={()=>void retry()}>Отправить</button>}</span>}
   {error&&<span className="trip-document-error" role="alert">{error}</span>}
  </div>
 }
