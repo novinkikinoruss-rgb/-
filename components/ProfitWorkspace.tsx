@@ -5,19 +5,20 @@ import {db} from '../lib/supabase';
 import {tripPeriod} from '../lib/trips';
 import {profitReport,expenseCategories,cents,rubles,type ProfitData,type ProfitFilter,type ProfitExpense,type CostRow} from '../lib/profit';
 import {Modal} from './Modal';
+import {FinancePlanning} from './FinancePlanning';
 const empty:ProfitData={trips:[],customers:[],sites:[],vehicles:[],carriers:[],expenses:[],invoices:[],accruals:[],payments:[],deductions:[]};
 const money=(value:number)=>new Intl.NumberFormat('ru-RU',{style:'currency',currency:'RUB',maximumFractionDigits:2}).format(rubles(value));
 const percent=(value:number|null)=>value===null?'—':value.toLocaleString('ru-RU',{maximumFractionDigits:1})+'%';
 const today=()=>tripPeriod('today').from;
 export function ProfitWorkspace({overview=false,onOpenProfit}:{overview?:boolean;onOpenProfit?:()=>void}){
- const [data,setData]=useState<ProfitData>(empty),[loading,setLoading]=useState(true),[busy,setBusy]=useState(false),[error,setError]=useState(''),[notice,setNotice]=useState('');
+ const [data,setData]=useState<ProfitData>(empty),[loading,setLoading]=useState(true),[hasLoaded,setHasLoaded]=useState(false),[busy,setBusy]=useState(false),[error,setError]=useState(''),[notice,setNotice]=useState('');
  const initial:ProfitFilter={...tripPeriod('month'),customer:'',site:'',service:''};
  const [draft,setDraft]=useState(initial),[filter,setFilter]=useState(initial),[period,setPeriod]=useState('month');
  const [modal,setModal]=useState<'expense'|'delete'|'vat'|null>(null),[form,setForm]=useState<Record<string,string>>({}),[editing,setEditing]=useState<ProfitExpense|null>(null);
  async function reload(){
   if(!db){setLoading(false);setError('Для финансового отчёта подключите рабочую базу');return}
   setLoading(true);
-  try{const r=await db.rpc('respectlogistic_read_profit');if(r.error)throw Error(r.error.message);if(!r.data||!Array.isArray(r.data.expenses)||!Array.isArray(r.data.trips))throw Error('Отчёт получен в неверном формате');setData(r.data as ProfitData);setError('')}
+  try{const r=await db.rpc('respectlogistic_read_profit');if(r.error)throw Error(r.error.message);if(!r.data||!Array.isArray(r.data.expenses)||!Array.isArray(r.data.trips))throw Error('Отчёт получен в неверном формате');setData(r.data as ProfitData);setHasLoaded(true);setError('')}
   catch(e){setError((e as Error).message||'Не удалось загрузить прибыль')}finally{setLoading(false)}
  }
  useEffect(()=>{void reload()},[]);
@@ -67,13 +68,14 @@ export function ProfitWorkspace({overview=false,onOpenProfit}:{overview?:boolean
    <label className="field">Период<select value={period} onChange={e=>{setPeriod(e.target.value);if(e.target.value!=='custom')setDraft(p=>({...p,...tripPeriod(e.target.value)}))}}><option value="month">Текущий месяц</option><option value="week">Последние 7 дней</option><option value="today">Сегодня</option><option value="all">Все даты</option><option value="custom">Свой период</option></select></label>
    <label className="field">С даты<input type="date" value={draft.from} onChange={e=>{setPeriod('custom');setDraft(p=>({...p,from:e.target.value}))}}/></label>
    <label className="field">По дату<input type="date" value={draft.to} onChange={e=>{setPeriod('custom');setDraft(p=>({...p,to:e.target.value}))}}/></label>
+   <FinancePlanning data={data} filter={filter} onChanged={reload} overview={overview} loading={loading}/>
    {!overview&&<><label className="field">Заказчик<select value={draft.customer} onChange={e=>setDraft(p=>({...p,customer:e.target.value,site:'',service:''}))}><option value="">Все заказчики</option>{data.customers.map(c=><option key={c.id} value={c.id}>{c.name}</option>)}</select></label>
    <label className="field">Объект<select value={draft.site} onChange={e=>setDraft(p=>({...p,site:e.target.value,service:''}))}><option value="">Все объекты</option>{visibleSites.map(s=><option key={s.id} value={s.id}>{s.name}</option>)}</select></label>
    <label className="field">Услуга<select value={draft.service} onChange={e=>setDraft(p=>({...p,service:e.target.value}))}><option value="">Все услуги</option>{services.map(s=><option key={s}>{s}</option>)}</select></label></>}
    <button className="button" disabled={loading}>Применить</button>
   </form>
   {loading&&<p className="profit-loading" role="status">Обновляем финансовые данные…</p>}
-  {report&&!calculationError&&!loading&&<>
+  {report&&!calculationError&&(!loading||hasLoaded)&&<>
    <div className="profit-metrics">{[
     [report.vatConfigured?'Выручка без НДС':'Сумма рейсов · НДС не уточнён',money(report.revenue),report.vatConfigured?'По выполненным рейсам':'Укажите порядок включения НДС','revenue'],
     ['Учтённые расходы',money(report.expense),'Минус подтверждённый входной НДС','expense'],
