@@ -2,6 +2,7 @@
 import {Fragment,useEffect,useRef,useState,type FormEvent} from 'react';
 import {Plus,Search,RefreshCw,Download,Pencil,Trash2,Truck,Lock} from 'lucide-react';
 import {db} from '../lib/supabase';
+import type {AccountingDocument} from '../lib/accounting';
 import {Modal} from './Modal';
 import {TripDocuments,sendTripToDrive,type TripFile,type DriveExport} from './TripDocuments';
 import {blankTripFilter,tripVehicleChoices,filterTrips,toggleVisibleSelection,tripPeriod,volumeTotals,csvCell,type TripFilter,type TripRow} from '../lib/trips';
@@ -10,7 +11,7 @@ type Site={id:string;customer_id:string;name:string;loading_address:string;unloa
 type Vehicle={id:string;plate:string;brand:string|null;model:string|null;carrier_id:string|null;is_subcontractor_vehicle:boolean;assigned_driver_id:string|null;archived_at:string|null};
 type Driver={id:string;full_name:string;carrier_id:string|null;job_status:string;archived_at:string|null};
 type Carrier={id:string;name:string;is_blocked:boolean};
-type Workspace={trips:TripRow[];customers:Customer[];sites:Site[];vehicles:Vehicle[];drivers:Driver[];carriers:Carrier[];files:TripFile[];exports:DriveExport[]};
+type Workspace={accounting_documents?:AccountingDocument[];trips:TripRow[];customers:Customer[];sites:Site[];vehicles:Vehicle[];drivers:Driver[];carriers:Carrier[];files:TripFile[];exports:DriveExport[]};
 const empty:Workspace={trips:[],customers:[],sites:[],vehicles:[],drivers:[],carriers:[],files:[],exports:[]};
 const statuses:Record<string,string>={assigned:'Запланирован',sent:'В работе',delivered:'Выполнен',cancelled:'Отменён'};
 const money=(n:number)=>new Intl.NumberFormat('ru-RU',{style:'currency',currency:'RUB'}).format(n||0);
@@ -122,7 +123,7 @@ export function TripsWorkspace(){
     <td><strong>{Number(t.volume||0).toLocaleString('ru-RU',{maximumFractionDigits:3})}</strong><small>{t.unit||'м³'}</small></td>
     <td>{data.customers.find(c=>c.id===t.customer_id)?.name||'—'}</td><td>{data.sites.find(s=>s.id===t.site_id)?.name||'—'}</td><td>{data.drivers.find(d=>d.id===t.driver_id)?.full_name||'—'}</td><td>{t.service_name||'—'}</td><td>{money(Number(t.unit_price||0))}</td><td><strong>{money(Number(t.unit_price||0)*Number(t.volume||0))}</strong></td><td><span className={'trip-status '+(t.status==='delivered'&&(!t.documents_confirmed||!data.files.some(f=>f.trip_id===t.id))?'sent':t.status)}>{t.status==='delivered'&&!t.documents_confirmed?'Выполнен · нужны документы':statuses[t.status]||t.status}</span><select className="trip-status-select" aria-label={'Изменить статус рейса '+t.trip_number} value={t.status} disabled={busy||t.locked} onChange={e=>void changeStatus(t,e.target.value)} onDoubleClick={e=>e.stopPropagation()}>{Object.entries(statuses).map(([value,label])=><option key={value} value={value}>{label}</option>)}</select></td>
     <td><div className="trip-row-actions"><button className="icon-button" aria-label={'Редактировать '+t.trip_number} disabled={busy||t.locked} onClick={()=>editTrip(t)}><Pencil size={15}/></button><button className="icon-button trip-delete" aria-label={'Удалить '+t.trip_number} disabled={busy} onClick={()=>{setSelected([t.id]);setError('');setModal('delete')}}><Trash2 size={15}/></button></div></td>
-   </tr><tr className="trip-documents-row"><td colSpan={15}><TripDocuments tripId={t.id} files={data.files.filter(f=>f.trip_id===t.id)} confirmed={Boolean(t.documents_confirmed)} completed={t.status==='delivered'} archive={data.exports.find(e=>e.trip_id===t.id)} onChanged={reload}/></td></tr></Fragment>})}</tbody>
+   </tr><tr className="trip-documents-row"><td colSpan={15}><TripDocuments accountingDocuments={data.accounting_documents?.filter(d=>d.trip_ids?.includes(t.id))} tripId={t.id} files={data.files.filter(f=>f.trip_id===t.id)} confirmed={Boolean(t.documents_confirmed)} completed={t.status==='delivered'} archive={data.exports.find(e=>e.trip_id===t.id)} onChanged={reload}/></td></tr></Fragment>})}</tbody>
   </table>{loading&&<div className="trip-table-empty">Загрузка рейсов…</div>}{!loading&&!rows.length&&<div className="trip-table-empty"><Truck size={30}/><strong>Рейсов пока нет</strong><p>Измените фильтр или добавьте первый рейс.</p><button className="button" onClick={newTrip}>Добавить рейс</button></div>}</div>
   <footer className="trip-sheet-footer"><span>Рейсов: <strong>{rows.length}</strong></span><span>Объём: <strong>{volume.map(v=>v.total.toLocaleString('ru-RU')+' '+v.unit).join(' · ')||'—'}</strong></span><span>Сумма: <strong>{money(rows.reduce((s,t)=>s+Number(t.volume||0)*Number(t.unit_price||0),0))}</strong></span><span className="trip-footer-hint">Прокрутите таблицу вправо для остальных столбцов</span></footer>
   {modal==='edit'&&<Modal title={expectedVersion?'Редактирование рейса':'Новый рейс'} busy={busy} onClose={()=>{if(!busy)setModal(null)}}><form onSubmit={save}><fieldset className="form-body" disabled={busy}><div className="form-grid">

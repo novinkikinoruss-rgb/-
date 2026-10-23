@@ -1,6 +1,7 @@
 'use client';
 import {useState} from 'react';
 import {db} from '../lib/supabase';
+import {accountingKinds,accountingStatuses,downloadAccounting,type AccountingDocument} from '../lib/accounting';
 export type TripFile={id:string;trip_id:string;file_name:string;doc_type:string;storage_path:string;mime_type:string;file_size:number};
 export type DriveExport={trip_id:string;state:string;folder_url:string|null;error:string|null};
 export const documentKinds:Record<string,string>={ttn:'ТТН / накладная',waybill:'Путевой лист',ticket:'Талон',upd:'УПД',registry:'Реестр',invoice:'Счёт',other:'Другой документ'};
@@ -10,7 +11,7 @@ export async function sendTripToDrive(tripId:string){
  const response=await fetch('/api/trip-drive',{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+data.session.access_token},body:JSON.stringify({tripId}),signal:AbortSignal.timeout(110000)});
  const result=await response.json();if(!response.ok)throw Error(result.message||'Не удалось отправить документы на Диск');return result;
 }
-export function TripDocuments({tripId,files,confirmed,completed,archive,onChanged}:{tripId:string;files:TripFile[];confirmed:boolean;completed:boolean;archive?:DriveExport;onChanged:()=>Promise<void>}){
+export function TripDocuments({accountingDocuments=[],tripId,files,confirmed,completed,archive,onChanged}:{accountingDocuments?:AccountingDocument[];tripId:string;files:TripFile[];confirmed:boolean;completed:boolean;archive?:DriveExport;onChanged:()=>Promise<void>}){
  const [kind,setKind]=useState('ttn'),[busy,setBusy]=useState(false),[error,setError]=useState('');
  async function upload(file:File){
   if(!db||busy)return;setBusy(true);setError('');
@@ -41,6 +42,7 @@ export function TripDocuments({tripId,files,confirmed,completed,archive,onChange
  return <div className="trip-document-strip">
   <span className={'document-badge '+(!files.length?'missing':confirmed?'complete':'partial')}>{!files.length?'Нет документов от водителя':confirmed?'Комплект подтверждён':'Проверьте комплект документов'}</span>
   <div className="trip-document-files">{files.map(f=><button className="text-button" key={f.id} title={documentKinds[f.doc_type]} onClick={()=>void open(f)}>{f.file_name}</button>)}</div>
+  {!!accountingDocuments.length&&<div className="accounting-trip-documents"><span>Бухгалтерия:</span>{accountingDocuments.map(d=><button className="text-button" key={d.id} title="Скачать сохранённую печатную форму" onClick={()=>downloadAccounting(d)}>{accountingKinds[d.kind]} {d.number} · {accountingStatuses[d.status]}</button>)}</div>}
   <select aria-label="Тип документа" value={kind} disabled={busy} onChange={e=>setKind(e.target.value)}>{Object.entries(documentKinds).map(([k,v])=><option key={k} value={k}>{v}</option>)}</select>
   <label className={'button secondary compact '+(busy?'disabled':'')}>{busy?'Обработка…':'Загрузить документ'}<input className="trip-file-input" type="file" disabled={busy} aria-label="Загрузить документ любого формата до 10 МБ" onChange={e=>{const f=e.target.files?.[0];e.target.value='';if(f)void upload(f)}}/></label>
   {!!files.length&&!confirmed&&<button className="button secondary compact" disabled={busy} onClick={()=>void confirm()}>Комплект полный</button>}
