@@ -1,0 +1,35 @@
+import {test,expect} from '@playwright/test';
+test('Overview preserves all filters, customer documents/payments, grouped reminders and safe errors',async({page},info)=>{
+ const uid='00000000-0000-4000-8000-000000000099';const user={id:uid,aud:'authenticated',role:'authenticated',email:'test@example.invalid',app_metadata:{},user_metadata:{},created_at:'2026-01-01T00:00:00Z'};
+ const token=Buffer.from('{"alg":"HS256"}').toString('base64url')+'.'+Buffer.from(JSON.stringify({sub:uid,exp:Math.floor(Date.now()/1000)+3600})).toString('base64url')+'.test';
+ const d=new Date(),today=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+ const customer={id:'customer',name:'ООО «Очень длинное название заказчика для проверки переноса текста в дашборде»'},other={id:'other',name:'Другой заказчик'};
+ const base={customer_id:customer.id,site_id:'site',service_name:'Перевозка',vehicle_id:'vehicle',driver_id:'driver',carrier_id:null,trip_date:today,volume:1,unit:'м³',unit_price:1220,documents_confirmed:false};
+ const trips=['assigned','sent','delivered','cancelled'].map((status,i)=>({...base,id:'trip-'+i,trip_number:String(i+1),status}));trips.push({...base,id:'old-trip',trip_number:'old',status:'delivered',trip_date:'2020-01-01',documents_confirmed:true},{...base,id:'other-trip',trip_number:'other',status:'delivered',customer_id:'other',site_id:'other-site',service_name:'Разгрузка'});
+ const profit={trips,customers:[customer,other],sites:[{id:'site',customer_id:customer.id,name:'Объект',service_name:'Перевозка'},{id:'other-site',customer_id:'other',name:'Другой объект',service_name:'Разгрузка'}],vehicles:[{id:'vehicle',plate:'А123ВС77',carrier_id:null,is_subcontractor_vehicle:false,archived_at:null}],drivers:[{id:'driver',carrier_id:null,archived_at:null,job_status:'active'}],carriers:[],expenses:[],invoices:[],accruals:[{id:'accrual',trip_id:'trip-2',active:true,accrual_date:today,base:100,bonus:10,tax:15}],payments:[{accrual_id:'accrual',kind:'salary',amount:10}],deductions:[{accrual_id:'accrual',amount:5}],settings:{vat_rate:22,prices_include_vat:true}};
+ const doc={id:'doc',kind:'invoice',customer_id:customer.id,status:'issued',total:1220,paid_amount:200,due_date:'2020-01-01',document_date:today,trip_ids:['trip-2'],snapshot:{items:[{trip_id:'trip-2',gross:1220,site_id:'site',service:'Перевозка'}]}};
+ profit.accounting_invoices=[{...doc,credited:100}];const account={documents:[doc,{...doc,id:'upd',kind:'upd'},{...doc,id:'registry',kind:'registry'}],credits:[{invoice_id:'doc',amount:100}]};
+ const service={partners:[{archived:false}],requests:[{status:'requested'}],vehicles:[{id:'vehicle',plate:'А123ВС77',odometer_km:100,next_service_km:90,next_oil_km:1000,reminder_before_km:100}]};
+ let failProfit=false;const unexpected=[];
+ await page.route('**/supabase/**',async route=>{
+  const path=new URL(route.request().url()).pathname;let result={};
+  if(path.endsWith('/token'))result={access_token:token,refresh_token:'test-refresh',expires_in:3600,token_type:'bearer',user};if(path.endsWith('/user'))result=user;
+  if(path.endsWith('/respectlogistic_read_workspace'))result={revision:0,customers:[{...customer,inn:'7700000009'},other],contracts:[],specifications:[],sites:[],documents:[],activity:[]};
+  if(path.endsWith('/respectlogistic_read_profit')){if(failProfit){await route.fulfill({status:500,json:{message:'test unavailable'}});return}result=profit}
+  if(path.endsWith('/respectlogistic_read_accounting'))result=account;if(path.endsWith('/respectlogistic_read_service'))result=service;
+  if(path.includes('/rpc/')&&!/read_workspace|read_profit|read_accounting|read_service|crm_read_trip_workspace|driver_extras|read_trip_progress/.test(path))unexpected.push(path);
+  await route.fulfill({json:result});
+ });
+ await page.goto('/');await page.getByLabel('Email',{exact:true}).fill('test@example.invalid');await page.getByLabel('Пароль',{exact:true}).fill('test-password');await page.getByRole('button',{name:'Войти',exact:true}).click();
+ const dashboard=page.getByRole('region',{name:'Дашборд CRM'});await expect(dashboard).toBeVisible();await expect(dashboard.locator('.overview-customer-row')).toHaveCount(2);
+ await dashboard.getByLabel('Заказчик обзора').selectOption(customer.id);await expect(dashboard.locator('.overview-customer-row')).toHaveCount(1);await dashboard.getByLabel('Объект обзора').selectOption('site');await dashboard.getByLabel('Услуга обзора').selectOption('Перевозка');
+ await expect(dashboard.locator('.overview-finance-stat.revenue>strong')).toHaveText(/1\s?000/);
+ const row=dashboard.locator('.overview-customer-row');await expect(row.locator('.overview-customer-due>strong')).toHaveText(/920/);await expect(row.getByText('2 УПД / реестров',{exact:true})).toBeVisible();await expect(row.locator('.overview-customer-steps>div').nth(1).locator('strong')).toHaveText(/1\s?220/);
+ const reminders=dashboard.getByRole('region',{name:'Напоминания по разделам'});await expect(reminders.getByRole('heading',{name:'Транспорт',exact:true})).toBeVisible();await expect(reminders.getByRole('heading',{name:'Бухгалтерия',exact:true})).toBeVisible();await expect(reminders.getByText('Зарплата к выплате',{exact:true})).toBeVisible();await expect(reminders.getByText('Налоги к оплате',{exact:true})).toBeVisible();
+ await expect(dashboard.locator('.overview-column.delivered>header>strong')).toHaveText('1');await dashboard.getByLabel('Период обзора').selectOption('all');await expect(dashboard.locator('.overview-column.delivered>header>strong')).toHaveText('2');
+ await row.locator('summary').click();await expect(row.getByText('Перевозка',{exact:true})).toBeVisible();expect(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth)).toBe(false);await page.screenshot({path:'test-results/overview-'+info.project.name+'.png',fullPage:true});
+ await dashboard.getByLabel('Период обзора').selectOption('custom');await dashboard.getByLabel('Начало периода обзора').fill('2019-01-01');await dashboard.getByLabel('Конец периода обзора').fill('2019-12-31');await expect(dashboard.getByText('По выбранным условиям выполненных услуг пока нет.')).toBeVisible();
+ await dashboard.getByRole('button',{name:'Сбросить фильтры'}).click();await expect(dashboard.getByLabel('Заказчик обзора')).toHaveValue('');await expect(dashboard.locator('.overview-customer-row')).toHaveCount(2);
+ failProfit=true;await dashboard.getByRole('button',{name:'Обновить обзор'}).click();await expect(dashboard.getByRole('alert')).toContainText('Рейсы и финансы');await expect(dashboard.locator('.overview-finance-stat.revenue>strong')).toHaveText('—');expect(unexpected).toEqual([]);
+ await dashboard.getByRole('button',{name:'Открыть заказчиков',exact:true}).click();await expect(page.getByRole('heading',{name:/Заказчики/}).first()).toBeVisible();
+});

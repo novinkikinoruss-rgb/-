@@ -1,11 +1,12 @@
 'use client';
 import {useEffect,useRef,useState,type FormEvent} from 'react';
+import {useFeedback} from './Notifications';
 import {db} from '../lib/supabase';
 import {emptyDriverData,dateTime,serviceKinds,statusLabels,phoneLink,type DriverData,type NoteBody,type Partner,type ServiceRequest} from '../lib/driver-service';
 type Editor={kind:'partner'|'account'|'note'|'fine'|'confirm'|'complete'|'reject';id?:string;expected?:string};
 const tabNames={requests:'Заявки в сервис',partners:'Договорные сервисы',access:'Доступ водителей',notes:'Заметки',shifts:'Отчёты смен',duties:'Периоды управления',fines:'Штрафы'};
 export function ServiceWorkspace(){
- const [data,setData]=useState<DriverData>(emptyDriverData),[tab,setTab]=useState<keyof typeof tabNames>('requests'),[error,setError]=useState(''),[success,setSuccess]=useState(''),[busy,setBusy]=useState(false),[loading,setLoading]=useState(true),[editor,setEditor]=useState<Editor|null>(null),[values,setValues]=useState<Record<string,string>>({}),[revealed,setRevealed]=useState<NoteBody|null>(null),[filter,setFilter]=useState('');const dialog=useRef<HTMLDialogElement>(null);
+ const [data,setData]=useState<DriverData>(emptyDriverData),[tab,setTab]=useState<keyof typeof tabNames>('requests'),[error,setError]=useState(''),[success,setSuccess]=useFeedback(),[busy,setBusy]=useState(false),[loading,setLoading]=useState(true),[editor,setEditor]=useState<Editor|null>(null),[values,setValues]=useState<Record<string,string>>({}),[revealed,setRevealed]=useState<NoteBody|null>(null),[filter,setFilter]=useState('');const dialog=useRef<HTMLDialogElement>(null);
  async function rpc(name:string,params:Record<string,unknown>={}){if(!db)throw Error('Рабочая база не подключена');const result=await db.rpc('respectlogistic_'+name,params);if(result.error)throw Error(result.error.message);return result.data;}
  async function load(){setLoading(true);try{const service=await rpc('read_service');const extras=await rpc('driver_extras');const road=await rpc('driver_road_data');setData({...emptyDriverData(),...service,...extras,...road});setError('');}catch(e){setError((e as Error).message)}finally{setLoading(false)}}
  useEffect(()=>{void load();const timer=setInterval(()=>{if(document.visibilityState==='visible'&&!dialog.current?.open)void load()},60000);return()=>clearInterval(timer)},[]);

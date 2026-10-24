@@ -1,6 +1,7 @@
 'use client';
 import {useEffect,useState,type FormEvent} from 'react';
 import {Truck,Users,Plus,Search,RefreshCw,FileText,Wallet,AlertTriangle,Check,Download} from 'lucide-react';
+import {useFeedback} from './Notifications';
 import {db} from '../lib/supabase';
 import {Modal} from './Modal';
 import {fleetCalculation,accrualBalance,maintenanceState,roundMoney,type FleetAccrual,type FleetPayment,type FleetDeduction} from '../lib/fleet';
@@ -19,7 +20,7 @@ const photo='https://imagens.mfrural.com.br/mfrural-produtos-us/139357-928961-83
 const title:Record<Mode,string>={driver:'Карточка водителя',vehicle:'Карточка собственной техники',archiveDriver:'Статус водителя / архив',archiveVehicle:'Архив техники',contract:'Договор с водителем',maintenance:'Выполненное обслуживание',fine:'Штраф водителя',payment:'Выплата зарплаты / налогов'};
 export function FleetWorkspace(){
  const [view,setView]=useState<'drivers'|'vehicles'|'payroll'|'documents'>('drivers'),[drivers,setDrivers]=useState<Driver[]>([]),[vehicles,setVehicles]=useState<Vehicle[]>([]),[trips,setTrips]=useState<Trip[]>([]),[sites,setSites]=useState<Site[]>([]),[fines,setFines]=useState<Fine[]>([]),[accruals,setAccruals]=useState<FleetAccrual[]>([]),[payments,setPayments]=useState<FleetPayment[]>([]),[deductions,setDeductions]=useState<FleetDeduction[]>([]),[maintenance,setMaintenance]=useState<Maintenance[]>([]);
- const [driverId,setDriverId]=useState(''),[vehicleId,setVehicleId]=useState(''),[query,setQuery]=useState(''),[archive,setArchive]=useState(false),[loading,setLoading]=useState(true),[busy,setBusy]=useState(false),[error,setError]=useState(''),[success,setSuccess]=useState('');
+ const [driverId,setDriverId]=useState(''),[vehicleId,setVehicleId]=useState(''),[query,setQuery]=useState(''),[archive,setArchive]=useState(false),[loading,setLoading]=useState(true),[busy,setBusy]=useState(false),[error,setError]=useState(''),[success,setSuccess]=useFeedback();
  const [modal,setModal]=useState<Mode|null>(null),[form,setForm]=useState<Record<string,string>>({}),[editing,setEditing]=useState(false),[calculationTrip,setCalculationTrip]=useState(''),[rateDraft,setRateDraft]=useState('');
  const [filter,setFilter]=useState({driver:'',from:'',to:''}),[applied,setApplied]=useState<{driver:string;from:string;to:string}|null>(null),[selected,setSelected]=useState<string[]>([]),[documentTrip,setDocumentTrip]=useState('');
  const driver=drivers.find(d=>d.id===driverId),vehicle=vehicles.find(v=>v.id===vehicleId);

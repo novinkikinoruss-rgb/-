@@ -1,6 +1,7 @@
 'use client';
 import {useEffect,useState,type FormEvent} from 'react';
 import {Plus,RefreshCw,Download,Printer,Building2,FileText,ArrowUpRight} from 'lucide-react';
+import {useFeedback} from './Notifications';
 import {db} from '../lib/supabase';
 import {Modal} from './Modal';
 import {tripPeriod,type TripRow} from '../lib/trips';
@@ -9,7 +10,7 @@ type Workspace={trips:TripRow[];customers:{id:string;name:string}[];sites:{id:st
 const empty:Workspace={trips:[],customers:[],sites:[],vehicles:[],company:{},documents:[],links:[],credits:[],history:[]};
 const today=()=>tripPeriod('today').from;
 export function AccountingWorkspace(){
- const [data,setData]=useState<Workspace>(empty),[loading,setLoading]=useState(true),[loaded,setLoaded]=useState(false),[busy,setBusy]=useState(false),[error,setError]=useState(''),[notice,setNotice]=useState('');
+ const [data,setData]=useState<Workspace>(empty),[loading,setLoading]=useState(true),[loaded,setLoaded]=useState(false),[busy,setBusy]=useState(false),[error,setError]=useState(''),[notice,setNotice]=useFeedback();
  const initial:AccountingFilter={...tripPeriod('month'),customer:'',site:'',service:''};
  const [draft,setDraft]=useState(initial),[filter,setFilter]=useState(initial),[selected,setSelected]=useState<string[]>([]),[tab,setTab]=useState<'trips'|'documents'>('trips');
  const [modal,setModal]=useState<'create'|'company'|'detail'|'payment'|'credit'|'cancel'|null>(null),[form,setForm]=useState<Record<string,string>>({}),[active,setActive]=useState(''),[expected,setExpected]=useState(''),[complete,setComplete]=useState(false);

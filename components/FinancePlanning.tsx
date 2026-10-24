@@ -1,6 +1,7 @@
 'use client';
 import {useEffect,useState,type FormEvent} from 'react';
 import {Plus,Pencil,Trash2,CalendarDays,Route,Target} from 'lucide-react';
+import {useFeedback} from './Notifications';
 import {db} from '../lib/supabase';
 import {cents,rubles,type ProfitData,type ProfitFilter,type FinancePlan,type FinanceEvent} from '../lib/profit';
 import {planComparison,paymentCalendar,tripCostReport,type CalendarEntry} from '../lib/finance-planning';
@@ -11,7 +12,7 @@ const pct=(n:number|null)=>n===null?'—':n.toLocaleString('ru-RU',{maximumFract
 const statusNames={paid:'Закрыт',partial:'Частично',overdue:'Просрочен',planned:'Запланирован'};
 export function FinancePlanning({data,filter,onChanged,overview=false,loading=false}:{data:ProfitData;filter:ProfitFilter;onChanged:()=>Promise<void>;overview?:boolean;loading?:boolean}){
  const [tab,setTab]=useState<'plan'|'calendar'|'cost'>('plan'),[showPaid,setShowPaid]=useState(false),[day,setDay]=useState(''),[general,setGeneral]=useState(false),[allocation,setAllocation]=useState<'distance'|'equal'>('distance');
- const [modal,setModal]=useState<'plan'|'event'|'due'|'delete'|null>(null),[form,setForm]=useState<Record<string,string>>({}),[recordKind,setRecordKind]=useState<'plan'|'event'>('plan'),[expected,setExpected]=useState<string|null>(null),[busy,setBusy]=useState(false),[error,setError]=useState(''),[notice,setNotice]=useState('');
+ const [modal,setModal]=useState<'plan'|'event'|'due'|'delete'|null>(null),[form,setForm]=useState<Record<string,string>>({}),[recordKind,setRecordKind]=useState<'plan'|'event'>('plan'),[expected,setExpected]=useState<string|null>(null),[busy,setBusy]=useState(false),[error,setError]=useState(''),[notice,setNotice]=useFeedback();
  const today=tripPeriod('today').from,disabled=loading||busy;
  const plans=planComparison(data,filter),calendar=paymentCalendar(data,filter,today,showPaid),costing=tripCostReport(data,filter,general,allocation);
  const customer=(id:string)=>data.customers.find(c=>c.id===id)?.name||'Общее событие',site=(id:string)=>data.sites.find(s=>s.id===id)?.name||'Все объекты';

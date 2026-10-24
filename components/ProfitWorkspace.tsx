@@ -1,6 +1,7 @@
 'use client';
 import {useEffect,useState,type FormEvent} from 'react';
 import {TrendingUp,Plus,RefreshCw,Wallet,ReceiptText,ArrowUpRight,Pencil,Trash2,AlertTriangle} from 'lucide-react';
+import {useFeedback} from './Notifications';
 import {db} from '../lib/supabase';
 import {tripPeriod} from '../lib/trips';
 import {profitReport,expenseCategories,cents,rubles,type ProfitData,type ProfitFilter,type ProfitExpense,type CostRow} from '../lib/profit';
@@ -11,7 +12,7 @@ const money=(value:number)=>new Intl.NumberFormat('ru-RU',{style:'currency',curr
 const percent=(value:number|null)=>value===null?'—':value.toLocaleString('ru-RU',{maximumFractionDigits:1})+'%';
 const today=()=>tripPeriod('today').from;
 export function ProfitWorkspace({overview=false,onOpenProfit}:{overview?:boolean;onOpenProfit?:()=>void}){
- const [data,setData]=useState<ProfitData>(empty),[loading,setLoading]=useState(true),[hasLoaded,setHasLoaded]=useState(false),[busy,setBusy]=useState(false),[error,setError]=useState(''),[notice,setNotice]=useState('');
+ const [data,setData]=useState<ProfitData>(empty),[loading,setLoading]=useState(true),[hasLoaded,setHasLoaded]=useState(false),[busy,setBusy]=useState(false),[error,setError]=useState(''),[notice,setNotice]=useFeedback();
  const initial:ProfitFilter={...tripPeriod('month'),customer:'',site:'',service:''};
  const [draft,setDraft]=useState(initial),[filter,setFilter]=useState(initial),[period,setPeriod]=useState('month');
  const [modal,setModal]=useState<'expense'|'delete'|'vat'|null>(null),[form,setForm]=useState<Record<string,string>>({}),[editing,setEditing]=useState<ProfitExpense|null>(null);

@@ -13,7 +13,7 @@ test('Вся цепочка: заказчик → договор → услуг�
  await ready(page);await page.getByRole('button',{name:'Новый заказчик',exact:true}).click();
  await page.getByRole('dialog').getByLabel('ИНН организации').fill('7800000002');
  await page.getByLabel('Краткое название').fill('ООО «Тестовая компания»');await save(page);
- await expect(page.getByRole('status').filter({hasText:'Создана карточка заказчика'})).toBeVisible();
+ await expect(page.getByRole('status').filter({hasText:'Заказчик создан ✓'})).toBeVisible();await page.getByRole('button',{name:/^Оповещения/}).click();await expect(page.getByRole('region',{name:'Последние оповещения'}).getByText('Заказчик создан ✓',{exact:true})).toBeVisible();await page.getByRole('button',{name:'Закрыть историю оповещений',exact:true}).click();
  await page.getByRole('button',{name:'Создать договор',exact:true}).click();await save(page);
  await page.getByRole('button',{name:'Создать спецификацию',exact:true}).click();
  await page.getByRole('textbox',{name:'Услуга 1',exact:true}).fill('Перевозка щебня');await page.getByRole('textbox',{name:'Цена 1',exact:true}).fill('725,50');await save(page);

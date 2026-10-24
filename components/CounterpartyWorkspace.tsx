@@ -1,6 +1,7 @@
 'use client';
 import {useEffect,useMemo,useState,type FormEvent} from 'react';
 import {Building2,Truck,Users,Plus,Search,Check,FileText,Wallet,RefreshCw,Download} from 'lucide-react';
+import {useFeedback} from './Notifications';
 import {db} from '../lib/supabase';
 import {Modal} from './Modal';
 type Carrier={id:string;name:string;inn:string|null;kpp:string|null;ogrn:string|null;phone:string|null;email:string|null;legal_address:string|null};
@@ -26,7 +27,7 @@ function invoiceState(i:Invoice){if(cents(i.paid_amount)>=cents(i.amount))return
 function tone(status:string){return status==='Оплачен'?'paid':status==='Просрочен'?'overdue':status==='Частично оплачен'?'partial':'pending';}
 export function CounterpartyWorkspace(){
  const [carriers,setCarriers]=useState<Carrier[]>([]),[vehicles,setVehicles]=useState<Vehicle[]>([]),[drivers,setDrivers]=useState<Driver[]>([]),[trips,setTrips]=useState<Trip[]>([]),[sites,setSites]=useState<Site[]>([]),[docs,setDocs]=useState<Doc[]>([]),[invoices,setInvoices]=useState<Invoice[]>([]),[contracts,setContracts]=useState<Contract[]>([]),[specifications,setSpecifications]=useState<Specification[]>([]);
- const [selected,setSelected]=useState(''),[query,setQuery]=useState(''),[tab,setTab]=useState<Tab>('Обзор'),[loading,setLoading]=useState(true),[error,setError]=useState(''),[success,setSuccess]=useState(''),[busy,setBusy]=useState(false);
+ const [selected,setSelected]=useState(''),[query,setQuery]=useState(''),[tab,setTab]=useState<Tab>('Обзор'),[loading,setLoading]=useState(true),[error,setError]=useState(''),[success,setSuccess]=useFeedback(),[busy,setBusy]=useState(false);
  const [modal,setModal]=useState<Kind|null>(null),[editing,setEditing]=useState(false),[form,setForm]=useState<Record<string,string>>({}),[services,setServices]=useState<Service[]>([]);
  const [draft,setDraft]=useState<Filter>(blankFilter),[applied,setApplied]=useState<Filter>(blankFilter),[expanded,setExpanded]=useState(false);
  const current=carriers.find(c=>c.id===selected);

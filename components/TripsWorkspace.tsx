@@ -2,6 +2,7 @@
 import {Fragment,useEffect,useRef,useState,type FormEvent} from 'react';
 import {Plus,Search,RefreshCw,Download,Pencil,Trash2,Truck,Lock} from 'lucide-react';
 import {tripStages,dateTime} from '../lib/driver-service';
+import {useFeedback} from './Notifications';
 import {db} from '../lib/supabase';
 import type {AccountingDocument} from '../lib/accounting';
 import {Modal} from './Modal';
@@ -18,7 +19,7 @@ const statuses:Record<string,string>={assigned:'Запланирован',sent:'
 const money=(n:number)=>new Intl.NumberFormat('ru-RU',{style:'currency',currency:'RUB'}).format(n||0);
 const today=()=>tripPeriod('today').from;
 export function TripsWorkspace(){
- const [data,setData]=useState<Workspace>(empty),[loading,setLoading]=useState(true),[busy,setBusy]=useState(false),[error,setError]=useState(''),[notice,setNotice]=useState('');
+ const [data,setData]=useState<Workspace>(empty),[loading,setLoading]=useState(true),[busy,setBusy]=useState(false),[error,setError]=useState(''),[notice,setNotice]=useFeedback();
  const [draft,setDraft]=useState<TripFilter>({...blankTripFilter}),[applied,setApplied]=useState<TripFilter>({...blankTripFilter}),[period,setPeriod]=useState('all'),[selected,setSelected]=useState<string[]>([]);
  const [modal,setModal]=useState<'edit'|'delete'|null>(null),[form,setForm]=useState<Record<string,string>>({}),[expectedVersion,setExpectedVersion]=useState<string|null>(null);
  const selectAll=useRef<HTMLInputElement>(null),sending=useRef(false);
