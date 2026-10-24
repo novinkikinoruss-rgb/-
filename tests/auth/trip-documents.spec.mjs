@@ -27,10 +27,10 @@ test('Trip attachments appear after upload, download original bytes and link to 
   if(path.includes('/storage/v1/object/sign/')&&route.request().method()==='POST'){
    downloadRequests++;
    if(failDownload){await route.fulfill({status:500,json:{message:'Хранилище временно недоступно'}});return}
-   expect(route.request().postDataJSON().download).toBe(filename);
-   result={signedURL:'/object/sign/respectlogistic-trip-documents/ttn.pdf?token=test-signed&download=ttn.pdf'};
+   result={signedURL:'/object/sign/respectlogistic-trip-documents/ttn.pdf?token=test-signed'};
   }
   if(path.includes('/object/sign/')&&route.request().method()==='GET'){
+   expect(new URL(route.request().url()).searchParams.get('download')).toBe(filename);
    await route.fulfill({body:content,contentType:'application/pdf',headers:{'Content-Disposition':"attachment; filename*=UTF-8''"+encodeURIComponent(filename)}});return;
   }
   await route.fulfill({json:result});
