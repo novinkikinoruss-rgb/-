@@ -1,6 +1,7 @@
 'use client';
 import {useState} from 'react';
 import {db} from '../lib/supabase';
+import {prepareTripFile} from '../lib/trip-file-client';
 import {accountingKinds,accountingStatuses,downloadAccounting,type AccountingDocument} from '../lib/accounting';
 export type TripFile={id:string;trip_id:string;file_name:string;doc_type:string;storage_path:string;mime_type:string;file_size:number};
 export type DriveExport={trip_id:string;state:string;folder_url:string|null;error:string|null};
@@ -16,9 +17,9 @@ export function TripDocuments({accountingDocuments=[],tripId,files,confirmed,com
  async function upload(file:File){
   if(!db||busy)return;setBusy(true);setError('');
   try{
-   if(file.size<=0||file.size>10485760)throw Error('Выберите файл размером до 10 МБ');
+   const prepared=await prepareTripFile(file);
    const {data}=await db.auth.getSession();if(!data.session)throw Error('Войдите в CRM повторно');
-   const body=new FormData();body.set('tripId',tripId);body.set('uploadId',crypto.randomUUID());body.set('kind',kind);body.set('file',file);
+   const body=new FormData();body.set('tripId',tripId);body.set('uploadId',crypto.randomUUID());body.set('kind',kind);body.set('file',prepared.blob,prepared.name);
    await new Promise<void>((resolve,reject)=>{
     const xhr=new XMLHttpRequest();xhr.open('POST','/api/trip-files');xhr.setRequestHeader('Authorization','Bearer '+data.session!.access_token);xhr.timeout=120000;
     xhr.onload=()=>{let result;try{result=JSON.parse(xhr.responseText)}catch{reject(Error('Сервер не завершил загрузку. Повторите попытку'));return}if(xhr.status>=200&&xhr.status<300&&result.saved)resolve();else reject(Error(result.message||'Не удалось сохранить документ'))};
@@ -44,7 +45,7 @@ export function TripDocuments({accountingDocuments=[],tripId,files,confirmed,com
   <div className="trip-document-files">{files.map(f=><button className="text-button" key={f.id} title={documentKinds[f.doc_type]} onClick={()=>void open(f)}>{f.file_name}</button>)}</div>
   {!!accountingDocuments.length&&<div className="accounting-trip-documents"><span>Бухгалтерия:</span>{accountingDocuments.map(d=><button className="text-button" key={d.id} title="Скачать сохранённую печатную форму" onClick={()=>downloadAccounting(d)}>{accountingKinds[d.kind]} {d.number} · {accountingStatuses[d.status]}</button>)}</div>}
   <select aria-label="Тип документа" value={kind} disabled={busy} onChange={e=>setKind(e.target.value)}>{Object.entries(documentKinds).map(([k,v])=><option key={k} value={k}>{v}</option>)}</select>
-  <label className={'button secondary compact '+(busy?'disabled':'')}>{busy?'Обработка…':'Загрузить документ'}<input className="trip-file-input" type="file" disabled={busy} aria-label="Загрузить документ любого формата до 10 МБ" onChange={e=>{const f=e.target.files?.[0];e.target.value='';if(f)void upload(f)}}/></label>
+  <label className={'button secondary compact '+(busy?'disabled':'')}>{busy?'Обработка…':'Загрузить документ'}<input className="trip-file-input" type="file" disabled={busy} aria-label="Загрузить документ любого формата до 10 МБ" onChange={e=>{const input=e.currentTarget,f=input.files?.[0];if(f)void upload(f).finally(()=>{input.value=''})}}/></label>
   {!!files.length&&!confirmed&&<button className="button secondary compact" disabled={busy} onClick={()=>void confirm()}>Комплект полный</button>}
   {confirmed&&completed&&<span className="trip-archive-status">{archive?.state==='complete'&&archive.folder_url?<a href={archive.folder_url} target="_blank" rel="noreferrer">Документы на Google Диске ↗</a>:archive?.state==='awaiting_connection'?'Google Диск: ожидается подключение':archive?.state==='error'?'Ошибка отправки на Диск':archive?.state==='processing'?'Отправка на Диск…':'В очереди на Google Диск'}{archive?.error&&<small>{archive.error}</small>}{['error','pending','awaiting_connection'].includes(archive?.state||'pending')&&<button className="text-button" disabled={busy} onClick={()=>void retry()}>Отправить</button>}</span>}
   {error&&<span className="trip-document-error" role="alert">{error}</span>}
