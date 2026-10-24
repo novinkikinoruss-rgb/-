@@ -19,3 +19,5 @@ test('draft/cancelled invoices and advances are not service revenue or billed se
 test('rounding preserves every kopeck across objects and overpayments fail explicitly',()=>{
  const invoice=doc('invoice','invoice');invoice.paid_amount=0.01;const a=customerOverview(data,[invoice],[],{...filter,site:'a'})[0],b=customerOverview(data,[invoice],[],{...filter,site:'b'})[0];assert.equal(a.paid+b.paid,1);assert.throws(()=>customerOverview(data,[{...invoice,paid_amount:300}],[],filter));
 });
+
+test('undated completed trips stay outside recognized services, matching the financial report',()=>{const r=customerOverview({...data,trips:[...data.trips,{...trip('undated'),trip_date:null}]},[],[],{...filter,from:'',to:''})[0];assert.equal(r.trips,2);assert.equal(r.gross,24400)});

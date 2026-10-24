@@ -2,7 +2,7 @@ import {allocatePaid,cents,tripEarnings,type ProfitData,type ProfitFilter,type P
 import type {AccountingDocument,AccountingCredit} from './accounting.ts';
 export function overviewTrips<T extends ProfitTrip>(data:{trips:T[]},filter:ProfitFilter){return data.trips.filter(t=>(!filter.from||Boolean(t.trip_date&&t.trip_date>=filter.from))&&(!filter.to||Boolean(t.trip_date&&t.trip_date<=filter.to))&&(!filter.customer||t.customer_id===filter.customer)&&(!filter.site||t.site_id===filter.site)&&(!filter.service||(t.service_name||'').trim()===filter.service.trim()))}
 export function customerOverview(data:ProfitData,documents:AccountingDocument[],credits:AccountingCredit[],filter:ProfitFilter){
- const trips=overviewTrips(data,filter).filter(t=>t.status==='delivered'),selected=new Set(trips.map(t=>t.id));
+ const trips=overviewTrips(data,filter).filter(t=>t.status==='delivered'&&t.trip_date),selected=new Set(trips.map(t=>t.id));
  const rows=new Map<string,{id:string;name:string;trips:number;gross:number;serviceCount:number;services:{name:string;unit:string;volume:number;gross:number;trips:number}[];closedGross:number;closingCount:number;billed:number;paid:number;credited:number;due:number;unbilled:number}>();
  for(const t of trips){const id=t.customer_id||'';let row=rows.get(id);if(!row){row={id,name:data.customers.find(c=>c.id===id)?.name||'Заказчик не указан',trips:0,gross:0,serviceCount:0,services:[],closedGross:0,closingCount:0,billed:0,paid:0,credited:0,due:0,unbilled:0};rows.set(id,row)}
   const amount=tripEarnings(t,data.settings).gross;row.trips++;row.gross+=amount;
