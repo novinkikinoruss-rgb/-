@@ -5,8 +5,8 @@ const headers={'Cache-Control':'no-store'};
 export async function handleCompanyLookup(request:Request,config:Config,transport:typeof fetch=fetch){
  const fail=(error:string,status:number)=>Response.json({error},{status,headers});
  const authorization=request.headers.get('Authorization')||'';
+ if(!config.base||!config.key)return fail('Автозаполнение DaData ещё не подключено. Можно заполнить карточку вручную.',503);
  if(!authorization.startsWith('Bearer '))return fail('Для поиска реквизитов войдите в CRM',401);
- if(!config.base||!config.key)return fail('Поиск реквизитов не настроен. Можно заполнить карточку вручную.',503);
  try{
   const auth=await transport(config.base+'/auth/v1/user',{headers:{apikey:config.key,Authorization:authorization},cache:'no-store',signal:AbortSignal.timeout(10000)});
   if(!auth.ok||!(await auth.json())?.id)return fail('Сессия истекла. Войдите снова',401);
