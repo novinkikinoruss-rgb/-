@@ -1,6 +1,11 @@
 name: Driver Android APK
 on:
   workflow_dispatch:
+    inputs:
+      signed:
+        description: 'Require permanent release signing'
+        type: boolean
+        default: true
   push:
     branches: ['respectlogistic/customers']
     paths: ['android/**', '.github/workflows/android-driver.yml']
@@ -16,8 +21,11 @@ jobs:
       DRIVER_STORE_PASSWORD: ${{ secrets.DRIVER_ANDROID_STORE_PASSWORD }}
       DRIVER_KEY_PASSWORD: ${{ secrets.DRIVER_ANDROID_KEY_PASSWORD }}
       DRIVER_KEY_ALIAS: ${{ secrets.DRIVER_ANDROID_KEY_ALIAS }}
+      DRIVER_CERT_SHA256: ${{ secrets.DRIVER_ANDROID_CERT_SHA256 }}
+      DRIVER_REQUIRE_SIGNING: ${{ github.event_name == 'workflow_dispatch' && inputs.signed || false }}
     steps:
       - uses: actions/checkout@v4
+      - run: python3 tests/android-signing.test.py
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
@@ -30,25 +38,42 @@ jobs:
         with:
           gradle-version: '8.11.1'
       - name: Prepare permanent signing key when configured
+        id: signing
         shell: bash
         run: |
           if [ -n "$DRIVER_KEYSTORE_BASE64" ]; then
-            if [ -z "$DRIVER_STORE_PASSWORD" ] || [ -z "$DRIVER_KEY_PASSWORD" ] || [ -z "$DRIVER_KEY_ALIAS" ]; then
+            if [ -z "$DRIVER_STORE_PASSWORD" ] || [ -z "$DRIVER_KEY_PASSWORD" ] || [ -z "$DRIVER_KEY_ALIAS" ] || [ -z "$DRIVER_CERT_SHA256" ]; then
               echo 'Signing configuration is incomplete'; exit 1
             fi
             umask 077
             echo "$DRIVER_KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/driver-release.jks"
             echo "DRIVER_KEYSTORE_PATH=$RUNNER_TEMP/driver-release.jks" >> "$GITHUB_ENV"
+            echo 'kind=signed' >> "$GITHUB_OUTPUT"
           else
+            if [ "$DRIVER_REQUIRE_SIGNING" = 'true' ]; then
+              echo 'Permanent signing secrets are missing. Run scripts/configure-android-signing.py with Secrets write access.'; exit 1
+            fi
+            echo 'kind=unsigned-not-installable' >> "$GITHUB_OUTPUT"
             echo 'Unsigned build only: permanent signing secrets have not been configured.' >> "$GITHUB_STEP_SUMMARY"
           fi
       - run: gradle -p android --no-daemon assembleRelease
       - name: Verify signed release
         if: env.DRIVER_KEYSTORE_PATH != ''
-        run: '$ANDROID_HOME/build-tools/35.0.0/apksigner verify --verbose android/app/build/outputs/apk/release/app-release.apk'
+        shell: bash
+        run: |
+          "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --verbose --print-certs android/app/build/outputs/apk/release/app-release.apk > "$RUNNER_TEMP/driver-cert.txt"
+          python3 - <<'PY'
+          import os,re,pathlib
+          text=pathlib.Path(os.environ['RUNNER_TEMP'],'driver-cert.txt').read_text()
+          match=re.search(r'Signer #1 certificate SHA-256 digest: ([a-fA-F0-9]+)',text)
+          expected=os.environ['DRIVER_CERT_SHA256'].replace(':','').lower()
+          if not match or not re.fullmatch('[a-f0-9]{64}',expected) or match[1].lower()!=expected:
+              raise SystemExit('Signing certificate does not match the permanent release key')
+          print('APK signature and permanent certificate verified')
+          PY
       - uses: actions/upload-artifact@v4
         with:
-          name: respectlogistic-driver-apk-${{ github.run_number }}
+          name: respectlogistic-driver-${{ steps.signing.outputs.kind }}-${{ github.run_number }}
           path: android/app/build/outputs/apk/release/*.apk
           retention-days: 30
       - name: Remove temporary key

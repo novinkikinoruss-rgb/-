@@ -9,7 +9,7 @@ export type ShiftFile={id:string;report_id:string;trip_id:string|null;kind:strin
 export type Duty={id:string;plate?:string;driver_id:string;vehicle_id:string;started_at:string;ended_at:string|null;start_odometer:number;end_odometer:number|null};
 export type Fine={id:string;plate?:string;driver_id:string|null;vehicle_id:string;violation_at:string;location:string;reason:string;notice_number:string;amount:number;assignment:string;linked_fine_id:string|null;deducted:number;acknowledged_at:string|null;dispute:string};
 export type Account={driver_id:string;login:string;blocked:boolean;must_change_password:boolean};
-export type DriverTrip={id:string;trip_number:string;trip_date:string;vehicle_id:string;object:string;service_name:string;status:string};
+export type DriverTrip={id:string;trip_number:string;trip_date:string;vehicle_id:string;object:string;service_name:string;status:string;modified_at:string;stage:string;plate:string;customer:string;loading_address:string;unloading_address:string;route_km:number|null;volume:number;unit:string;documents_confirmed:boolean};
 export type DriverData={driver?:Driver;drivers:Driver[];vehicles:Vehicle[];partners:Partner[];requests:ServiceRequest[];accounts:Account[];notes:Note[];shifts:Shift[];shift_files:ShiftFile[];duties:Duty[];fines:Fine[];driver_trips:DriverTrip[]};
 export const emptyDriverData=():DriverData=>({drivers:[],vehicles:[],partners:[],requests:[],accounts:[],notes:[],shifts:[],shift_files:[],duties:[],fines:[],driver_trips:[]});
 export const serviceKinds:Record<string,string>={service:'Техническое обслуживание',oil:'Замена масла',repair:'Ремонт',tyres:'Шиномонтаж'};
@@ -26,3 +26,6 @@ export async function prepareDriverPhoto(file:File):Promise<string>{
   const data=canvas.toDataURL('image/jpeg',.8).split(',')[1];if(data.length>2796208)throw Error('Фото превышает 2 МБ после сжатия');return data;
  }finally{bitmap.close();}
 }
+
+export const tripStages:Record<string,{label:string;next:string|null;action:string}>={
+ '':{label:'Назначен',next:'accepted',action:'Принять рейс'},accepted:{label:'Принят',next:'loading',action:'На погрузке'},loading:{label:'На погрузке',next:'on_route',action:'Погружен · выехал'},on_route:{label:'В пути',next:'unloading',action:'На выгрузке'},unloading:{label:'На выгрузке',next:'completed',action:'Завершить рейс'},completed:{label:'Выполнен',next:null,action:''}};

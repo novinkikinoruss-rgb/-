@@ -11,6 +11,8 @@ assert.equal((await POST(request({action:'driver_access'}))).status,404);
 assert.equal((await POST(request({action:'service',p_token:'foreign',p_driver:'foreign'}))).status,200);
 assert.deepEqual(calls.at(-1).body,{p_token:token});assert.equal(calls.at(-1).headers.Authorization,undefined);
 assert.equal(calls.at(-1).url,'https://example.supabase.co/rest/v1/rpc/respectlogistic_driver_service');
+assert.equal((await POST(request({action:'trip_stage',p_id:'trip',p_stage:'loading',p_expected:'revision',p_unit_price:999,p_owner_id:'foreign'}))).status,200);
+assert.deepEqual(calls.at(-1).body,{p_id:'trip',p_stage:'loading',p_expected:'revision',p_token:token});
 upstream={value:{error:'Неверный логин или пароль'},status:200};
 assert.equal((await POST(request({action:'login',p_login:'driver',p_password:'wrong'},''))).status,401);
 upstream={value:{code:'28000',message:'Сначала смените временный пароль'},status:401};

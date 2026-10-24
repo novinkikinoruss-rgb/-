@@ -10,3 +10,6 @@ android/.gradle/
 android/**/build/
 *.jks
 *.keystore
+
+__pycache__/
+*.pyc

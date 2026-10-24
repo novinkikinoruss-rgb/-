@@ -22,3 +22,18 @@ test('Driver login, private notes, historical fine and mobile layout',async({pag
  await page.screenshot({path:`test-results/driver-${info.project.name}.png`,fullPage:true});
  await page.getByRole('button',{name:'Выйти',exact:true}).click();await expect(page.getByRole('heading',{name:'Вход',exact:true})).toBeVisible();expect(await page.evaluate(()=>localStorage.getItem('respectlogistic-driver-session-v1'))).toBeNull();
 });
+
+test('Assigned trip addresses and sequential driver progress',async({page})=>{
+ let stage='';let revision=0;const calls=[];
+ await page.addInitScript(()=>localStorage.setItem('respectlogistic-driver-session-v1','a'.repeat(64)));
+ await page.route('**/api/driver',async route=>{
+  const body=route.request().postDataJSON();calls.push(body);let result={};
+  if(body.action==='service')result={driver:{id:'driver',full_name:'Водитель рейса'},vehicles:[],partners:[],requests:[]};
+  if(body.action==='trip_stage'){stage=body.p_stage;revision++;result=null;}
+  if(body.action==='trips')result={driver_trips:[{id:'trip',trip_number:'7',trip_date:'2026-10-24',vehicle_id:'vehicle',plate:'А123АА 777',object:'Стройка',customer:'Заказчик',service_name:'Перевозка',volume:20,unit:'м³',route_km:100,loading_address:'Улица погрузки, 1',unloading_address:'Улица выгрузки, 2',modified_at:'revision-'+revision,stage,status:stage==='completed'?'delivered':stage?'sent':'assigned',documents_confirmed:false}]};
+  await route.fulfill({json:result});
+ });
+ await page.goto('/driver');await expect(page.getByText('Рейс №7 · 2026-10-24')).toBeVisible();await expect(page.getByText('Погрузка: Улица погрузки, 1')).toBeVisible();
+ for(const name of ['Принять рейс','На погрузке','Погружен · выехал','На выгрузке','Завершить рейс'])await page.getByRole('button',{name,exact:true}).click();
+ await expect(page.getByText('Отправьте накладные и талоны через отчёт смены. Комплект проверяет диспетчер.')).toBeVisible();expect(calls.filter(c=>c.action==='trip_stage').map(c=>c.p_stage)).toEqual(['accepted','loading','on_route','unloading','completed']);expect(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth)).toBe(false);
+});
