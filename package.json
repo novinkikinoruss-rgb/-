@@ -7,7 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "tsc --noEmit",
-    "test": "node --experimental-strip-types tests/domain.test.mjs && node --experimental-strip-types --test tests/fleet.test.mjs && node --experimental-strip-types tests/trips.test.mjs && node --experimental-strip-types tests/isolation-proxy.test.mjs && node --experimental-strip-types tests/trips-proxy.test.mjs && node --experimental-strip-types tests/trip-drive.test.mjs && node --experimental-strip-types tests/trip-file-upload.test.mjs && node --experimental-strip-types tests/profit.test.mjs && node --experimental-strip-types tests/finance-planning.test.mjs && node --experimental-strip-types tests/accounting.test.mjs && node --experimental-strip-types tests/driver-api.test.mjs && node --experimental-strip-types --test tests/trip-file-client.test.mjs",
+    "test": "node --experimental-strip-types tests/domain.test.mjs && node --experimental-strip-types --test tests/fleet.test.mjs && node --experimental-strip-types tests/trips.test.mjs && node --experimental-strip-types tests/isolation-proxy.test.mjs && node --experimental-strip-types tests/trips-proxy.test.mjs && node --experimental-strip-types tests/trip-drive.test.mjs && node --experimental-strip-types tests/trip-file-upload.test.mjs && node --experimental-strip-types tests/profit.test.mjs && node --experimental-strip-types tests/finance-planning.test.mjs && node --experimental-strip-types tests/accounting.test.mjs && node --experimental-strip-types tests/driver-api.test.mjs && node --experimental-strip-types --test tests/trip-file-client.test.mjs && node --experimental-strip-types --test tests/company-lookup.test.mjs",
     "test:e2e": "playwright test"
   },
   "dependencies": {

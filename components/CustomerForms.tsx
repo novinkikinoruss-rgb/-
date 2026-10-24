@@ -4,6 +4,7 @@ import {Plus,SearchCheck,LoaderCircle,ArrowRight,Trash2,Building2,FileText,MapPi
 import {emptyCustomer,validInn,moneyInput,type Customer,type CustomerInput,type Command,type Workspace,type Service} from '../lib/domain';
 import {db} from '../lib/supabase';
 import {useNotice} from './Notifications';
+import {CompanySearch} from './CompanySearch';
 import {Modal} from './Modal';
 export type FormKind='customer'|'contract'|'specification'|'site';
 export function CustomerForms({kind,customer,edit=false,state,preferredContractId,preferredSpecId,onClose,onSaved}:{kind:FormKind;customer:Customer|null;edit?:boolean;state:Workspace;preferredContractId?:string;preferredSpecId?:string;onClose:()=>void;onSaved:(command:Command)=>Promise<void>}){
@@ -21,7 +22,7 @@ export function CustomerForms({kind,customer,edit=false,state,preferredContractI
   const selectedSpec=specs.find(s=>s.id===specId);
   const [site,setSite]=useState({serviceId:selectedSpec?.services[0]?.id||'',name:'',address:'',loadingAddress:'',routeKm:'',foreman:'',foremanPhone:'',foremanEmail:'',access:'',notes:''});
   const labels={customer:edit?'Редактировать заказчика':'Новый заказчик',contract:'Новый договор',specification:'Новая спецификация',site:'Новый объект'};
-  function changeCompany(key:keyof CustomerInput,value:string){if(key==='inn')innGeneration.current++;setCompany(p=>({...p,[key]:value}));}
+  function changeCompany(key:keyof CustomerInput,value:string){innGeneration.current++;setCompany(p=>({...p,[key]:value}));}
   async function lookupInn(){
     if(!validInn(company.inn)){setError('Введите корректный ИНН организации: 10 цифр');return;}
     if(lookup)return;
@@ -32,7 +33,7 @@ export function CustomerForms({kind,customer,edit=false,state,preferredContractI
       const result=await response.json();if(!response.ok){window.dispatchEvent(new CustomEvent('respectlogistic:inn',{detail:response.status===503?'unconfigured':'error'}));throw new Error(result.error||'Не удалось получить реквизиты');}
       if(generation!==innGeneration.current)return;
       setCompany(previous=>({...previous,...result.company}));notify('Реквизиты организации загружены. Проверьте их перед сохранением.');window.dispatchEvent(new CustomEvent('respectlogistic:inn',{detail:'ok'}));
-    }catch(e){const message=e instanceof Error?e.message:'Не удалось загрузить данные';setError(message);notify(message,'error');}
+    }catch(e){if(generation!==innGeneration.current)return;const message=e instanceof Error?e.message:'Не удалось загрузить данные';setError(message);notify(message,'error');}
     finally{setLookup(false);}
   }
   function companyField(label:string,key:keyof CustomerInput,required=false,type='text'){
@@ -58,7 +59,7 @@ export function CustomerForms({kind,customer,edit=false,state,preferredContractI
   return <Modal title={labels[kind]} onClose={onClose} busy={busy||lookup}><form onSubmit={save}><fieldset disabled={busy} className="form-body">
     <div className="form-intro"><span className="soft-icon">{kind==='customer'?<Building2/>:kind==='site'?<MapPin/>:<FileText/>}</span><p>{kind==='customer'?'Заполните реквизиты. После сохранения предложим создать договор.':kind==='contract'?'Номер присвоится при сохранении. Договор появится в папке компании.':kind==='specification'?'Услуги и цены будут доступны при создании объекта и будущих рейсов.':'Укажите маршрут, услугу и ответственного за объект.'}</p></div>
     {kind==='customer'&&<>
-      <section className="form-section"><h3>Компания и реквизиты</h3><div className="inn-lookup"><label className="field">ИНН организации *<input name="inn" inputMode="numeric" placeholder="10 цифр" required maxLength={10} value={company.inn} onChange={e=>changeCompany('inn',e.target.value.replace(/\D/g,''))} onBlur={()=>{if(db&&validInn(company.inn)&&lastInn.current!==company.inn)void lookupInn();}}/></label><button type="button" className="button secondary" disabled={lookup} onClick={()=>void lookupInn()}>{lookup?<LoaderCircle className="spin" size={16}/>:<SearchCheck size={16}/>}Заполнить по ИНН</button></div><div className="form-grid">{companyField('Краткое название','name',true)}{companyField('Полное наименование','fullName')}{companyField('КПП','kpp')}{companyField('ОГРН','ogrn')}<label className="field wide">Юридический адрес<textarea value={company.legalAddress} maxLength={4000} onChange={e=>changeCompany('legalAddress',e.target.value)}/></label>{companyField('Почтовый адрес','postalAddress')}{companyField('Руководитель','director')}{companyField('Действует на основании','basis')}</div></section>
+      <section className="form-section"><h3>Компания и реквизиты</h3><CompanySearch onSelect={details=>{innGeneration.current++;lastInn.current=details.inn;setError('');setCompany(previous=>({...previous,...details}));notify('Реквизиты загружены из DaData. Проверьте их перед сохранением.');window.dispatchEvent(new CustomEvent('respectlogistic:inn',{detail:'ok'}));}}/><div className="inn-lookup"><label className="field">ИНН организации *<input name="inn" inputMode="numeric" placeholder="10 цифр" required maxLength={10} value={company.inn} onChange={e=>changeCompany('inn',e.target.value.replace(/\D/g,''))} onBlur={()=>{if(db&&validInn(company.inn)&&lastInn.current!==company.inn)void lookupInn();}}/></label><button type="button" className="button secondary" disabled={lookup} onClick={()=>void lookupInn()}>{lookup?<LoaderCircle className="spin" size={16}/>:<SearchCheck size={16}/>}Заполнить по ИНН</button></div><div className="form-grid">{companyField('Краткое название','name',true)}{companyField('Полное наименование','fullName')}{companyField('КПП','kpp')}{companyField('ОГРН','ogrn')}<label className="field wide">Юридический адрес<textarea value={company.legalAddress} maxLength={4000} onChange={e=>changeCompany('legalAddress',e.target.value)}/></label>{companyField('Почтовый адрес','postalAddress')}{companyField('Руководитель','director')}{companyField('Действует на основании','basis')}</div></section>
       <section className="form-section"><h3>Контакты</h3><div className="form-grid">{companyField('Контактное лицо','contactName')}{companyField('Телефон','phone',false,'tel')}{companyField('Email','email',false,'email')}</div></section>
       <details className="form-section"><summary>Банковские реквизиты и примечания</summary><div className="form-grid">{companyField('Банк','bank')}{companyField('БИК','bik')}{companyField('Расчётный счёт','account')}{companyField('Корреспондентский счёт','correspondent')}<label className="field wide">Примечания<textarea value={company.notes} maxLength={4000} onChange={e=>changeCompany('notes',e.target.value)}/></label></div></details>
     </>}
