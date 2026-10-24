@@ -30,7 +30,7 @@ export function TripDocuments({accountingDocuments=[],tripId,files,confirmed,com
   }catch(e){setError((e as Error).message||'Не удалось загрузить документ')}finally{setBusy(false)}
  }
  async function open(file:TripFile){
-  if(!db)return;setError('');const r=await db.storage.from('respectlogistic-trip-documents').createSignedUrl(file.storage_path,300,{download:file.file_name});
+  if(!db)return;setError('');if(file.storage_path.startsWith('shift:')){try{const result=await db.rpc('respectlogistic_driver_file',{p_id:file.id});if(result.error)throw Error(result.error.message);const bytes=Uint8Array.from(atob(result.data.base64.replace(/\s/g,'')),c=>c.charCodeAt(0));const url=URL.createObjectURL(new Blob([bytes],{type:'image/jpeg'}));const link=document.createElement('a');link.href=url;link.download=file.file_name;link.click();setTimeout(()=>URL.revokeObjectURL(url),1000);}catch(e){setError((e as Error).message)}return;}const r=await db.storage.from('respectlogistic-trip-documents').createSignedUrl(file.storage_path,300,{download:file.file_name});
   if(r.error)setError(r.error.message);else{const link=document.createElement('a');link.href=r.data.signedUrl;link.download=file.file_name;document.body.appendChild(link);link.click();link.remove()}
  }
  async function confirm(){

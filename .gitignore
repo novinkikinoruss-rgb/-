@@ -5,3 +5,8 @@ node_modules/
 test-results/
 playwright-report/
 *.tsbuildinfo
+
+android/.gradle/
+android/**/build/
+*.jks
+*.keystore

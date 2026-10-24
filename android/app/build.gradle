@@ -1,0 +1,24 @@
+plugins { id 'com.android.application' }
+def releaseKey = System.getenv('DRIVER_KEYSTORE_PATH')
+android {
+ namespace 'com.respectlogistic.driver'
+ compileSdk 35
+ defaultConfig {
+  applicationId 'com.respectlogistic.driver'
+  minSdk 26
+  targetSdk 35
+  versionCode Integer.parseInt(System.getenv('DRIVER_VERSION_CODE') ?: '1')
+  versionName '0.1.' + (System.getenv('DRIVER_VERSION_CODE') ?: '1')
+ }
+ if(releaseKey) {
+  signingConfigs { release {
+   storeFile file(releaseKey)
+   storePassword System.getenv('DRIVER_STORE_PASSWORD')
+   keyAlias System.getenv('DRIVER_KEY_ALIAS')
+   keyPassword System.getenv('DRIVER_KEY_PASSWORD')
+  } }
+ }
+ buildTypes { release { if(releaseKey) signingConfig signingConfigs.release } }
+ compileOptions { sourceCompatibility JavaVersion.VERSION_17; targetCompatibility JavaVersion.VERSION_17 }
+}
+dependencies { implementation 'androidx.core:core:1.15.0' }

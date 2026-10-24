@@ -15,6 +15,7 @@ export async function POST(request:Request){
   const settings={clientId:process.env.GOOGLE_DRIVE_CLIENT_ID,clientSecret:process.env.GOOGLE_DRIVE_CLIENT_SECRET,refreshToken:process.env.GOOGLE_DRIVE_REFRESH_TOKEN,rootFolder:process.env.GOOGLE_DRIVE_TRIPS_ROOT_FOLDER_ID};
   if(!settings.clientId||!settings.clientSecret||!settings.refreshToken||!settings.rootFolder){await rpc('respectlogistic_finish_drive_export',{p_trip_id:tripId,p_version:manifest.version,p_state:'awaiting_connection',p_error:'Подключите Google Диск к CRM для автоматической отправки документов'});return Response.json({state:'awaiting_connection'})}
   const folder=await exportTripFiles(manifest,{clientId:settings.clientId,clientSecret:settings.clientSecret,refreshToken:settings.refreshToken,rootFolder:settings.rootFolder},async(path)=>{
+   if(path.startsWith('shift:')){const file=await rpc('respectlogistic_driver_file',{p_id:path.slice(6)});return new Uint8Array(Buffer.from(file.base64,'base64'));}
    const r=await fetch(base+'/storage/v1/object/authenticated/respectlogistic-trip-documents/'+path,{headers:{apikey:key!,Authorization:authorization!},signal:AbortSignal.timeout(20000),cache:'no-store'});
    if(!r.ok)throw Error('Не удалось прочитать документ из закрытого хранилища');return new Uint8Array(await r.arrayBuffer());
   });

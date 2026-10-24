@@ -1,0 +1,53 @@
+name: Driver Android APK
+on:
+  workflow_dispatch:
+  push:
+    branches: ['respectlogistic/customers']
+    paths: ['android/**', '.github/workflows/android-driver.yml']
+permissions:
+  contents: read
+jobs:
+  apk:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      DRIVER_VERSION_CODE: ${{ github.run_number }}
+      DRIVER_KEYSTORE_BASE64: ${{ secrets.DRIVER_ANDROID_KEYSTORE_BASE64 }}
+      DRIVER_STORE_PASSWORD: ${{ secrets.DRIVER_ANDROID_STORE_PASSWORD }}
+      DRIVER_KEY_PASSWORD: ${{ secrets.DRIVER_ANDROID_KEY_PASSWORD }}
+      DRIVER_KEY_ALIAS: ${{ secrets.DRIVER_ANDROID_KEY_ALIAS }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: android-actions/setup-android@v3
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.11.1'
+      - name: Prepare permanent signing key when configured
+        shell: bash
+        run: |
+          if [ -n "$DRIVER_KEYSTORE_BASE64" ]; then
+            if [ -z "$DRIVER_STORE_PASSWORD" ] || [ -z "$DRIVER_KEY_PASSWORD" ] || [ -z "$DRIVER_KEY_ALIAS" ]; then
+              echo 'Signing configuration is incomplete'; exit 1
+            fi
+            umask 077
+            echo "$DRIVER_KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/driver-release.jks"
+            echo "DRIVER_KEYSTORE_PATH=$RUNNER_TEMP/driver-release.jks" >> "$GITHUB_ENV"
+          else
+            echo 'Unsigned build only: permanent signing secrets have not been configured.' >> "$GITHUB_STEP_SUMMARY"
+          fi
+      - run: gradle -p android --no-daemon assembleRelease
+      - name: Verify signed release
+        if: env.DRIVER_KEYSTORE_PATH != ''
+        run: '$ANDROID_HOME/build-tools/35.0.0/apksigner verify --verbose android/app/build/outputs/apk/release/app-release.apk'
+      - uses: actions/upload-artifact@v4
+        with:
+          name: respectlogistic-driver-apk-${{ github.run_number }}
+          path: android/app/build/outputs/apk/release/*.apk
+          retention-days: 30
+      - name: Remove temporary key
+        if: always()
+        run: rm -f "$RUNNER_TEMP/driver-release.jks"
