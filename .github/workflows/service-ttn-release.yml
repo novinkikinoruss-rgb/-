@@ -1,0 +1,74 @@
+name: CRM release verification and archive
+on:
+  push:
+    branches: ['validation/service-ttn-release']
+permissions:
+  contents: read
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: c88e89ca01ef8efb09952731d3ff77cef8562035
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Archive exact production source
+        run: |
+          mkdir -p release
+          git archive --format=zip --output=release/CRM-service-ttn-source.zip HEAD
+          git rev-parse HEAD > release/COMMIT.txt
+          cp database/fix_service_read_actor_ambiguity.sql release/
+      - name: Verify exact deployed release and access boundaries
+        run: |
+          node --input-type=module <<'JS'
+          import assert from 'node:assert/strict';
+          import {writeFileSync} from 'node:fs';
+          const origin='https://respectlogistic.onrender.com';
+          const expected='c88e89ca01ef8efb09952731d3ff77cef8562035';
+          let health;
+          for(let attempt=0;attempt<36;attempt++){
+            try{
+              const response=await fetch(origin+'/api/health',{signal:AbortSignal.timeout(15000),cache:'no-store'});
+              health=await response.json();
+              if(response.ok&&health.commit===expected)break;
+            }catch{}
+            if(attempt<35)await new Promise(resolve=>setTimeout(resolve,10000));
+          }
+          assert.equal(health?.commit,expected,'Exact fixed release must be live');
+          const checks={commit:health.commit,health:health.status,checks:[]};
+          for(const path of ['/','/driver']){
+            const r=await fetch(origin+path,{signal:AbortSignal.timeout(20000)});
+            assert.equal(r.status,200);
+            checks.checks.push({path,status:r.status});
+            if(path==='/'){
+              const html=await r.text();
+              const scripts=[...new Set([...html.matchAll(/<script[^>]+src="([^"]+\.js(?:\?[^"]*)?)"/g)].map(m=>m[1].replaceAll('&amp;','&')))];
+              let found=false;
+              for(const script of scripts){
+                assert.equal(new URL(script,origin).origin,origin);
+                const asset=await fetch(new URL(script,origin),{signal:AbortSignal.timeout(20000)});
+                assert.equal(asset.status,200);
+                const js=await asset.text();
+                if(js.includes('Файл изменился во время чтения')||js.includes('Сохраните его на устройство'))found=true;
+              }
+              assert.ok(found,'Deployed browser code must contain file snapshot validation');
+              checks.fileSnapshotBundle=true;
+            }
+          }
+          for(const path of ['/api/trip-files','/api/driver/service']){
+            const r=await fetch(origin+path,{method:path==='/api/trip-files'?'POST':'GET',signal:AbortSignal.timeout(20000)});
+            assert.equal(r.status,401,'Anonymous request must be rejected');
+            checks.checks.push({path,status:r.status});
+          }
+          checks.limitations=['No authenticated customer writes or physical-device upload performed.'];
+          writeFileSync('release/verification.json',JSON.stringify(checks,null,2));
+          console.log('Exact deployment, file snapshot bundle, login pages and anonymous access boundaries verified.');
+          JS
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: CRM-service-ttn-release
+          path: release/
