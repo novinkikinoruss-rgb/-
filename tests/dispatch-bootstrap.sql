@@ -153,3 +153,10 @@ declare a respectlogistic_driver_accounts;begin
 end$$;
 grant usage on schema public,auth to anon,authenticated;grant execute on function auth.uid() to anon,authenticated;
 insert into auth.users(id) values('11111111-1111-4111-8111-111111111111');
+
+-- Mobile workflow dependencies: minimal schema only; production integration verifies real payroll triggers.
+create table public.crm_payroll_accruals(id uuid primary key,owner_id uuid,trip_id uuid,driver_id uuid,accrual_date date,base numeric,bonus numeric,active boolean);
+create table public.crm_payroll_deductions(id uuid primary key,owner_id uuid,accrual_id uuid,amount numeric);
+create table public.respectlogistic_driver_shift_reports(id uuid primary key,owner_id uuid,driver_id uuid,vehicle_id uuid,shift_date date,odometer numeric,technical_note text default '',comment text default '',status text default 'draft',modified_at timestamptz default clock_timestamp());
+create unique index mobile_fixture_report on respectlogistic_driver_shift_reports(driver_id,vehicle_id,shift_date) where status not in ('rejected','cancelled');
+create table public.respectlogistic_driver_shift_files(id uuid primary key,report_id uuid,owner_id uuid,driver_id uuid,trip_id uuid,kind text,file_name text,mime_type text,file_size integer,data bytea);

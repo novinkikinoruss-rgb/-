@@ -3,6 +3,7 @@ test('Driver login, private notes, historical fine and mobile layout',async({pag
  const requests=[];const vehicle={id:'vehicle',plate:'А123АА 777',odometer_km:150000,next_service_km:150500,next_oil_km:155000,reminder_before_km:1000};
  await page.route('**/api/driver',async route=>{
   const body=route.request().postDataJSON();requests.push(body);let result=null;
+  if(body.action==='mobile')result={mobile_runs:[],mobile_photos:[],expenses:[],salary:[]};
   if(body.action==='dispatch')result={dispatch_shifts:[],dispatch_vehicles:[]};
   if(body.action==='login')result={token:'a'.repeat(64),must_change_password:true};
   if(body.action==='service')result={driver:{id:'driver',full_name:'Тестовый водитель'},vehicles:[vehicle],partners:[],requests:[]};
@@ -18,7 +19,7 @@ test('Driver login, private notes, historical fine and mobile layout',async({pag
  expect(requests.some(r=>r.action==='note')).toBe(false);
  await page.getByRole('button',{name:'Показать данные доступа'}).click();await expect(page.getByText('Пароль: test-private-password')).toBeVisible();await page.getByRole('button',{name:'Скрыть',exact:true}).click();await expect(page.getByText('Пароль: test-private-password')).toHaveCount(0);
  await page.getByRole('button',{name:'Штрафы',exact:true}).click();await expect(page.getByText('Тестовая улица, 10')).toBeVisible();await page.getByLabel('Комментарий / возражение').fill('Прошу проверить постановление');await page.getByRole('button',{name:'Ознакомлен / отправить комментарий'}).click();await expect.poll(()=>requests.find(r=>r.action==='fine_response')?.p_dispute).toBe('Прошу проверить постановление');
- await page.getByRole('button',{name:'Смена',exact:true}).click();await page.getByLabel('Состояние автомобиля').fill('Проверить тормоза');await page.getByLabel('Что требуется для работы').fill('Лента для принтера');
+ await page.getByRole('button',{name:'Смена',exact:true}).click();await page.getByText('Отчёты смены и дополнительные фото',{exact:true}).click();await page.getByLabel('Состояние автомобиля').fill('Проверить тормоза');await page.getByLabel('Что требуется для работы').fill('Лента для принтера');
  expect(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth)).toBe(false);
  await page.screenshot({path:`test-results/driver-${info.project.name}.png`,fullPage:true});
  await page.getByRole('button',{name:'Выйти',exact:true}).click();await expect(page.getByRole('heading',{name:'Вход',exact:true})).toBeVisible();expect(await page.evaluate(()=>localStorage.getItem('respectlogistic-driver-session-v1'))).toBeNull();

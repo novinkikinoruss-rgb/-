@@ -16,6 +16,8 @@ for(const rpc of ['crm_prepare_payroll','crm_pay_driver_accruals','crm_apply_dri
  const response=await POST(new Request('https://crm.example/',{method:'POST',headers:{authorization:'Bearer test-user','content-type':'application/json'},body:'{}'}),{params:Promise.resolve({path:['rest','v1','rpc',rpc]})});
  assert.equal(response.status,200);assert.equal(calls.at(-1).url,'https://example.supabase.co/rest/v1/rpc/rl_'+rpc);
 }
+const mobile=await POST(new Request('https://crm.example/',{method:'POST',headers:{authorization:'Bearer test-user','content-type':'application/json'},body:'{}'}),{params:Promise.resolve({path:['rest','v1','rpc','respectlogistic_driver_mobile']})});
+assert.equal(mobile.status,200);assert.equal(calls.at(-1).url,'https://example.supabase.co/rest/v1/rpc/respectlogistic_driver_mobile');
 const count=calls.length;
 for(const path of [['rest','v1','secrets'],['rest','v1','rpc','respectlogistic_finish_drive_export'],['rest','v1','rl_crm_drivers'],['rest','v1','crm_drivers','extra'],['storage','v1','object','crm-documents','file.pdf'],['storage','v1','object','respectlogistic-trip-documents','..','file.pdf']])assert.equal((await GET(new Request('https://crm.example/'),{params:Promise.resolve({path})})).status,404);
 assert.equal(calls.length,count);

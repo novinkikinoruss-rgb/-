@@ -61,9 +61,12 @@ public final class MainActivity extends Activity {
   });
   web.loadUrl("https://"+HOST+"/driver");
  }
+ private boolean isMapHost(String host){
+  return host!=null&&(host.equals("ya.ru")||host.equals("yandex.ru")||host.endsWith(".yandex.ru")||host.equals("yandex.com")||host.endsWith(".yandex.com")||host.equals("yandex.by")||host.endsWith(".yandex.by")||host.equals("yandex.kz")||host.endsWith(".yandex.kz")||host.equals("yandex.com.tr"));
+ }
  private boolean navigate(Uri uri){
   if("https".equals(uri.getScheme())&&HOST.equals(uri.getHost())&&(uri.getPort()==-1||uri.getPort()==443)&&uri.getUserInfo()==null)return false;
-  if(("https".equals(uri.getScheme())&&("yandex.ru".equals(uri.getHost())||"maps.yandex.ru".equals(uri.getHost())))||"tel".equals(uri.getScheme())){
+  if(("https".equals(uri.getScheme())&&isMapHost(uri.getHost()))||"tel".equals(uri.getScheme())){
    try{startActivity(new Intent("tel".equals(uri.getScheme())?Intent.ACTION_DIAL:Intent.ACTION_VIEW,uri));}catch(android.content.ActivityNotFoundException ignored){}
   }
   return true;

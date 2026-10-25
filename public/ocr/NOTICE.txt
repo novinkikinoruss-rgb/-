@@ -1,0 +1,5 @@
+Tesseract.js 6.0.1 and tesseract.js-core: Apache License 2.0.
+https://github.com/naptha/tesseract.js
+https://github.com/naptha/tesseract.js-core
+English and Russian trained data from https://tessdata.projectnaptha.com/4.0.0/ (Tesseract language data, Apache License 2.0).
+These local assets permit on-device OCR without a third-party recognition service.
