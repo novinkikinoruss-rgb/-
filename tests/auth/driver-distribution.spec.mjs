@@ -1,0 +1,17 @@
+import {test,expect} from '@playwright/test';
+test('Driver accepts each shift separately, sees tomorrow work, and reports quantity only after unloading',async({page},info)=>{
+ const today=new Date().toLocaleDateString('en-CA',{timeZone:'Europe/Moscow'}),d=new Date(today+'T12:00:00Z');d.setUTCDate(d.getUTCDate()+1);const tomorrow=d.toISOString().slice(0,10);
+ const vehicle={id:'vehicle',plate:'А123ВС77',odometer_km:100,next_service_km:null,next_oil_km:null,reminder_before_km:100};
+ const details={number:'124',plate:vehicle.plate,site_name:'Объект',customer_name:'Заказчик',service_name:'Перевозка',loading_address:'Погрузка',unloading_address:'Выгрузка',loading_from:'08:00',loading_to:'22:00',unloading_from:'08:00',unloading_to:'22:00',contact_name:'Ответственный',contact_phone:'+79990000000',unit:'м³',time_zone:'Europe/Moscow'};
+ const shifts=[{id:'today',request_id:'request',shift_date:today,vehicle_id:vehicle.id,status:'sent',version:1,details,results:[]},{id:'tomorrow',request_id:'request',shift_date:tomorrow,vehicle_id:vehicle.id,status:'sent',version:1,details,results:[]}];let unloaded=0;
+ await page.addInitScript(()=>localStorage.setItem('respectlogistic-driver-session-v1','a'.repeat(64)));
+ await page.route('**/api/driver',async route=>{const b=route.request().postDataJSON();expect(route.request().headers().authorization).toBe('Bearer '+'a'.repeat(64));let result={};
+  if(b.action==='service')result={vehicles:[vehicle],partners:[],requests:[]};if(b.action==='extras')result={notes:[],shifts:[],shift_files:[]};if(b.action==='road')result={duties:[{id:'duty',vehicle_id:'vehicle',ended_at:null}],fines:[]};if(b.action==='trips')result={driver_trips:[]};
+  if(b.action==='dispatch'){if(b.p_action==='accept'){const s=shifts.find(s=>s.id===b.p_id);expect(b.p_expected).toBe(s.version);s.status='accepted';s.version++}result={dispatch_shifts:shifts,dispatch_vehicles:[vehicle]}}
+  if(b.action==='unload'){expect(b.p_shift).toBe('today');expect(b.p_record.volume).toBe(12.7);expect(b.p_record.unit).toBe('м³');unloaded++;shifts[0].results=[{id:b.p_record.id,volume:12.7,unit:'м³',created_at:new Date().toISOString()}];result='trip'}
+  await route.fulfill({json:result});
+ });
+ await page.goto('/driver');const section=page.getByRole('region',{name:'Смены по заявкам'});await expect(section).toBeVisible();await expect(section.getByLabel(/Фактически выгружено/)).toHaveCount(0);
+ const tomorrowCard=section.locator('.driver-dispatch').filter({hasText:tomorrow});await tomorrowCard.getByRole('button',{name:'Принять смену'}).click();await expect(tomorrowCard.getByText('Принята водителем',{exact:true})).toBeVisible();await expect(tomorrowCard.getByRole('button',{name:'Выгрузился — указать факт'})).toBeDisabled();expect(shifts[0].status).toBe('sent');expect(unloaded).toBe(0);
+ const todayCard=section.locator('.driver-dispatch').filter({hasText:today});await todayCard.getByRole('button',{name:'Принять смену'}).click();await todayCard.getByRole('button',{name:'Выгрузился — указать факт'}).click();await todayCard.getByLabel('Фактически выгружено').fill('12,7');await todayCard.getByRole('button',{name:'Сохранить выгрузку'}).click();await expect(todayCard.getByText(/12.7 м³/)).toBeVisible();expect(unloaded).toBe(1);expect(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth)).toBe(false);await page.screenshot({path:'test-results/driver-distribution-'+info.project.name+'.png',fullPage:true});
+});

@@ -55,6 +55,12 @@ jobs:
       - run: psql -v ON_ERROR_STOP=1 -f tests/database-fixture.sql
       - run: psql -v ON_ERROR_STOP=1 -f database/customers.sql
       - run: psql -v ON_ERROR_STOP=1 -f tests/database.integration.sql
+      - name: Dispatch shifts integration
+        run: |
+          createdb respectlogistic_dispatch_test
+          psql -d respectlogistic_dispatch_test -v ON_ERROR_STOP=1 -f tests/dispatch-bootstrap.sql
+          for migration in supabase/migrations/*dispatch*.sql; do psql -d respectlogistic_dispatch_test -v ON_ERROR_STOP=1 -f "$migration"; done
+          psql -d respectlogistic_dispatch_test -v ON_ERROR_STOP=1 -f tests/dispatch.integration.sql
   authentication:
     runs-on: ubuntu-latest
     timeout-minutes: 10

@@ -13,6 +13,10 @@ assert.deepEqual(calls.at(-1).body,{p_token:token});assert.equal(calls.at(-1).he
 assert.equal(calls.at(-1).url,'https://example.supabase.co/rest/v1/rpc/respectlogistic_driver_service');
 assert.equal((await POST(request({action:'trip_stage',p_id:'trip',p_stage:'loading',p_expected:'revision',p_unit_price:999,p_owner_id:'foreign'}))).status,200);
 assert.deepEqual(calls.at(-1).body,{p_id:'trip',p_stage:'loading',p_expected:'revision',p_token:token});
+assert.equal((await POST(request({action:'dispatch',p_action:'accept',p_id:'shift',p_expected:1,p_owner_id:'foreign'}))).status,200);
+assert.deepEqual(calls.at(-1).body,{p_action:'accept',p_id:'shift',p_expected:1,p_token:token});
+assert.equal((await POST(request({action:'unload',p_shift:'shift',p_record:{id:'result',volume:12,unit:'т'},p_expected:2,p_token:'foreign'}))).status,200);
+assert.equal(calls.at(-1).body.p_token,token);
 upstream={value:{error:'Неверный логин или пароль'},status:200};
 assert.equal((await POST(request({action:'login',p_login:'driver',p_password:'wrong'},''))).status,401);
 upstream={value:{code:'28000',message:'Сначала смените временный пароль'},status:401};

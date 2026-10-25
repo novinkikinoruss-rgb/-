@@ -3,6 +3,7 @@ test('Driver login, private notes, historical fine and mobile layout',async({pag
  const requests=[];const vehicle={id:'vehicle',plate:'А123АА 777',odometer_km:150000,next_service_km:150500,next_oil_km:155000,reminder_before_km:1000};
  await page.route('**/api/driver',async route=>{
   const body=route.request().postDataJSON();requests.push(body);let result=null;
+  if(body.action==='dispatch')result={dispatch_shifts:[],dispatch_vehicles:[]};
   if(body.action==='login')result={token:'a'.repeat(64),must_change_password:true};
   if(body.action==='service')result={driver:{id:'driver',full_name:'Тестовый водитель'},vehicles:[vehicle],partners:[],requests:[]};
   if(body.action==='extras')result={notes:[{id:'note',title:'Доступ к рабочему приложению',has_credentials:true}],shifts:[],shift_files:[],driver_trips:[]};
@@ -33,7 +34,7 @@ test('Assigned trip addresses and sequential driver progress',async({page})=>{
   if(body.action==='trips')result={driver_trips:[{id:'trip',trip_number:'7',trip_date:'2026-10-24',vehicle_id:'vehicle',plate:'А123АА 777',object:'Стройка',customer:'Заказчик',service_name:'Перевозка',volume:20,unit:'м³',route_km:100,loading_address:'Улица погрузки, 1',unloading_address:'Улица выгрузки, 2',modified_at:'revision-'+revision,stage,status:stage==='completed'?'delivered':stage?'sent':'assigned',documents_confirmed:false}]};
   await route.fulfill({json:result});
  });
- await page.goto('/driver');await expect(page.getByText('Рейс №7 · 2026-10-24')).toBeVisible();await expect(page.getByText('Погрузка: Улица погрузки, 1')).toBeVisible();
+ await page.goto('/driver');await page.getByRole('button',{name:'Рейсы',exact:true}).click();await expect(page.getByText('Рейс №7 · 2026-10-24')).toBeVisible();await expect(page.getByText('Погрузка: Улица погрузки, 1')).toBeVisible();
  for(const name of ['Принять рейс','На погрузке','Погружен · выехал','На выгрузке','Завершить рейс'])await page.getByRole('button',{name,exact:true}).click();
  await expect(page.getByText('Отправьте накладные и талоны через отчёт смены. Комплект проверяет диспетчер.')).toBeVisible();expect(calls.filter(c=>c.action==='trip_stage').map(c=>c.p_stage)).toEqual(['accepted','loading','on_route','unloading','completed']);expect(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth)).toBe(false);
 });
