@@ -52,8 +52,10 @@ foreach ($sid in @($userSid, $systemSid)) {
         [System.Security.AccessControl.AccessControlType]::Allow)
     $acl.AddAccessRule($rule)
 }
-Set-Acl -LiteralPath $path -AclObject $acl
-$check = Get-Acl -LiteralPath $path
+# Use .NET Framework directly: a caller running PowerShell 7 may leave a
+# PSModulePath that prevents Windows PowerShell 5 from importing Set-Acl.
+[System.IO.Directory]::SetAccessControl($path, $acl)
+$check = [System.IO.Directory]::GetAccessControl($path)
 if (-not $check.AreAccessRulesProtected -or $check.GetOwner([System.Security.Principal.SecurityIdentifier]).Value -ne $userSid.Value) {
     throw 'Private directory ownership or ACL protection could not be verified.'
 }
