@@ -62,6 +62,50 @@ do $$declare actor uuid=auth.uid();cid uuid=gen_random_uuid();co uuid=gen_random
  if not exists(select 1 from crm_trips where id=trip and status='delivered') then raise exception 'TEST: cancellation deleted trip';end if;
  perform set_config('dispatch.test_request',rid::text,true);perform set_config('dispatch.test_token',token,true);
 end$$;
+-- A confirmed assignment can be replaced before work; only the replacement driver can report the trip.
+do $$declare actor uuid=auth.uid();base respectlogistic_dispatch_requests;rid uuid=gen_random_uuid();old_driver uuid=gen_random_uuid();new_driver uuid;vehicle uuid=gen_random_uuid();old_shift uuid;new_shift uuid;stamp integer;old_token text;new_token text;trip uuid;docs jsonb;begin
+ select * into base from respectlogistic_dispatch_requests where id=current_setting('dispatch.test_request')::uuid;
+ select v.assigned_driver_id into new_driver from crm_vehicles v join respectlogistic_dispatch_shifts x on x.vehicle_id=v.id where x.request_id=base.id limit 1;
+ insert into crm_drivers(id,owner_id,app_scope,full_name) values(old_driver,actor,'respectlogistic','REPLACED DRIVER');
+ insert into crm_vehicles(id,owner_id,app_scope,plate,assigned_driver_id) values(vehicle,actor,'respectlogistic','R-'||substr(vehicle::text,1,8),old_driver);
+ perform respectlogistic_driver_access(old_driver,'password','dispatch-'||old_driver,'temporary-password-123');old_token=respectlogistic_driver_login('dispatch-'||old_driver,'temporary-password-123')->>'token';perform respectlogistic_driver_password(old_token,'permanent-password-456');
+ new_token=respectlogistic_driver_login('dispatch-'||new_driver,'permanent-password-456')->>'token';
+ perform respectlogistic_save_dispatch(base.payload||jsonb_build_object('id',rid,'customer_id',base.customer_id,'site_id',base.site_id,'date_from',current_date,'date_to',current_date));
+ perform respectlogistic_assign_dispatch(rid,1,current_date,current_date,jsonb_build_array(jsonb_build_object('vehicle_id',vehicle,'driver_id',old_driver)));
+ select id,version into old_shift,stamp from respectlogistic_dispatch_shifts where request_id=rid;
+ perform respectlogistic_dispatch_action(old_shift,stamp,'send');select version into stamp from respectlogistic_dispatch_shifts where id=old_shift;
+ perform respectlogistic_driver_dispatch(old_token,'accept',old_shift,stamp);select version into stamp from respectlogistic_dispatch_shifts where id=old_shift;
+ docs=respectlogistic_dispatch_documents(gen_random_uuid(),array[old_shift],'[{"kind":"waybill","count":1,"copies":1}]');
+ perform respectlogistic_duty_action(old_token,vehicle,'start',0);
+ begin perform respectlogistic_replace_dispatch_driver(old_shift,stamp,new_driver,'',true);raise exception using message='TEST: open driving period overwritten',errcode='P0002';exception when sqlstate 'P0001' then null;end;
+ perform respectlogistic_duty_action(old_token,vehicle,'end',0);
+ perform set_config('request.jwt.claim.sub',gen_random_uuid()::text,true);
+ begin perform respectlogistic_replace_dispatch_driver(old_shift,stamp,new_driver,'',true);raise exception using message='TEST: foreign owner replaced driver',errcode='P0002';exception when sqlstate 'P0001' then null;end;
+ perform set_config('request.jwt.claim.sub',actor::text,true);
+ begin perform respectlogistic_replace_dispatch_driver(old_shift,stamp-1,new_driver,'',true);raise exception using message='TEST: stale replacement accepted',errcode='P0002';exception when sqlstate 'P0001' then null;end;
+ -- Sending must roll back the whole replacement if the chosen driver's access is blocked.
+ perform respectlogistic_driver_access(new_driver,'block');
+ begin perform respectlogistic_replace_dispatch_driver(old_shift,stamp,new_driver,'',true);raise exception using message='TEST: blocked driver received replacement',errcode='P0002';exception when sqlstate 'P0001' then null;end;
+ if (select status from respectlogistic_dispatch_shifts where id=old_shift)<>'accepted' then raise exception 'TEST: failed send cancelled original assignment';end if;
+ perform respectlogistic_driver_access(new_driver,'unblock');new_token=respectlogistic_driver_login('dispatch-'||new_driver,'permanent-password-456')->>'token';
+ new_shift=respectlogistic_replace_dispatch_driver(old_shift,stamp,new_driver,'',true);
+ if (select status from respectlogistic_dispatch_shifts where id=old_shift)<>'cancelled' or not exists(select 1 from respectlogistic_dispatch_shifts where id=new_shift and driver_id=new_driver and status='sent') then raise exception 'TEST: replacement not atomic';end if;
+ if exists(select 1 from crm_trips where vehicle_id=vehicle) then raise exception 'TEST: replacing created a fake trip';end if;
+ if not exists(select 1 from respectlogistic_dispatch_documents where shift_id=old_shift and snapshot->>'driver_name'='REPLACED DRIVER') then raise exception 'TEST: historical document changed';end if;
+ perform set_config('request.jwt.claim.sub','',true);
+ select version into stamp from respectlogistic_dispatch_shifts where id=old_shift;
+ begin perform respectlogistic_dispatch_result(old_shift,jsonb_build_object('id',gen_random_uuid(),'volume',12,'unit','т'),stamp,old_token);raise exception using message='TEST: cancelled driver reported a trip',errcode='P0002';exception when sqlstate 'P0001' then null;end;
+ select version into stamp from respectlogistic_dispatch_shifts where id=new_shift;
+ begin perform respectlogistic_driver_dispatch(old_token,'accept',new_shift,stamp);raise exception using message='TEST: old driver accepted new assignment',errcode='P0002';exception when sqlstate 'P0001' then null;end;
+ perform respectlogistic_driver_dispatch(new_token,'accept',new_shift,stamp);select version into stamp from respectlogistic_dispatch_shifts where id=new_shift;
+ perform respectlogistic_duty_action(new_token,vehicle,'start',0);
+ trip=respectlogistic_dispatch_result(new_shift,jsonb_build_object('id',gen_random_uuid(),'volume',12,'unit','т'),stamp,new_token);
+ if not exists(select 1 from crm_trips where id=trip and driver_id=new_driver and vehicle_id=vehicle) then raise exception 'TEST: trip used the old permanently assigned driver';end if;
+ perform set_config('request.jwt.claim.sub',actor::text,true);
+ begin perform respectlogistic_replace_dispatch_driver(new_shift,stamp,old_driver,'',false);raise exception using message='TEST: reported work reassigned',errcode='P0002';exception when sqlstate 'P0001' then null;end;
+ docs=respectlogistic_dispatch_documents(gen_random_uuid(),array[new_shift],'[{"kind":"waybill","count":1,"copies":1}]');
+ if docs->0->'snapshot'->>'driver_name' is distinct from (select full_name from crm_drivers where id=new_driver) then raise exception 'TEST: new document used old driver';end if;
+end$$;
 set local role authenticated;
 do $$begin
  if (select count(*) from public.respectlogistic_dispatch_requests where id=current_setting('dispatch.test_request')::uuid)<>1 then raise exception 'TEST: own RLS read failed';end if;
@@ -71,6 +115,7 @@ do $$begin
 end$$;
 set local role anon;
 do $$begin
+ begin perform respectlogistic_replace_dispatch_driver(null,1,null,'',false);raise exception using message='TEST: anon replacement RPC allowed',errcode='P0002';exception when insufficient_privilege then null;end;
  perform set_config('request.jwt.claim.sub','',true);
  begin perform count(*) from public.respectlogistic_dispatch_requests;raise exception using message='TEST: anonymous table read accepted',errcode='P0002';exception when insufficient_privilege then null;end;
  if jsonb_array_length(public.respectlogistic_driver_dispatch(current_setting('dispatch.test_token'))->'dispatch_shifts')<>1 then raise exception 'TEST: opaque driver session failed as anon';end if;
@@ -78,4 +123,4 @@ do $$begin
 end$$;
 reset role;
 rollback;
-select 'PASS: independent shifts, isolation, acceptance without fake volume, actual unload, conflict checks, idempotency, print snapshots and extension. Rolled back.' as verification;
+select 'PASS: independent shifts, isolation, acceptance without fake volume, actual unload, conflict checks, idempotency, print snapshots, extension, safe driver replacement and actual trip driver. Rolled back.' as verification;

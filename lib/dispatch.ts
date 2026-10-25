@@ -18,3 +18,10 @@ export function dispatchPrintHtml(docs:DispatchDocument[]){
  return '<!doctype html><html lang="ru"><meta charset="utf-8"><title>Бланки распределения</title><style>body{font:12px Arial;color:#26382d;margin:24px}section{break-after:page}section:last-child{break-after:auto}h1{font-size:20px}table{border-collapse:collapse;width:100%}th,td{border:1px solid #b5c1ae;text-align:left;padding:8px}th{width:30%}.draft{padding:8px;background:#f5eedc;color:#786241}.sign{margin-top:40px}@page{size:A4;margin:12mm}@media print{button{display:none}body{margin:0}}</style><button onclick="window.print()">Печать / сохранить PDF</button>'+sections+'</html>';
 }
 export function printDispatch(docs:DispatchDocument[]){if(!docs.length)throw Error('Сначала сформируйте бланки');const win=window.open('','_blank');if(!win)throw Error('Разрешите открытие окна печати в браузере');win.opener=null;win.document.write(dispatchPrintHtml(docs));win.document.close();win.focus();}
+
+// Copy only editable request details; new identity/dates and fresh service pricing remain separate.
+export function copyDispatchFields(source:DispatchRequest,current:Record<string,string>){
+ const keys=['loading_address','loading_point','unloading_address','unloading_point','loading_from','loading_to','unloading_from','unloading_to','contact_name','contact_phone','sender','recipient','cargo_name','cargo_mass','notes','time_zone'];
+ return {...current,...Object.fromEntries(keys.map(key=>[key,source.payload[key]||''])),customer_id:source.customer_id,site_id:source.site_id};
+}
+export function dispatchSourceNumber(value:string){const match=value.trim().match(/^(?:[ЗзZz][-\s]*)?(\d+)$/);return match?Number(match[1]):null}
