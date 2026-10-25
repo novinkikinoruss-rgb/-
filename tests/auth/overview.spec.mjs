@@ -10,18 +10,20 @@ test('Overview preserves all filters, customer documents/payments, grouped remin
  const doc={id:'doc',kind:'invoice',customer_id:customer.id,status:'issued',total:1220,paid_amount:200,due_date:'2020-01-01',document_date:today,trip_ids:['trip-2'],snapshot:{items:[{trip_id:'trip-2',gross:1220,site_id:'site',service:'Перевозка'}]}};
  profit.accounting_invoices=[{...doc,credited:100}];const account={documents:[doc,{...doc,id:'upd',kind:'upd'},{...doc,id:'registry',kind:'registry'}],credits:[{invoice_id:'doc',amount:100}]};
  const service={partners:[{archived:false}],requests:[{status:'requested'}],vehicles:[{id:'vehicle',plate:'А123ВС77',odometer_km:100,next_service_km:90,next_oil_km:1000,reminder_before_km:100}]};
- let failProfit=false;const unexpected=[];
+ let balance=null;let failProfit=false;const unexpected=[];
  await page.route('**/supabase/**',async route=>{
   const path=new URL(route.request().url()).pathname;let result={};
   if(path.endsWith('/token'))result={access_token:token,refresh_token:'test-refresh',expires_in:3600,token_type:'bearer',user};if(path.endsWith('/user'))result=user;
   if(path.endsWith('/respectlogistic_read_workspace'))result={revision:0,customers:[{...customer,inn:'7700000009'},other],contracts:[],specifications:[],sites:[],documents:[],activity:[]};
+  if(path.endsWith('/respectlogistic_read_company_balance'))result={balance};if(path.endsWith('/respectlogistic_save_company_balance')){const p=route.request().postDataJSON();expect(p.p_amount).toBe(60000.5);expect(p.p_expected).toBeNull();balance={amount_kopecks:6000050,balance_date:p.p_date,modified_at:'2026-10-25T13:00:00Z'};result=balance;}
   if(path.endsWith('/respectlogistic_read_profit')){if(failProfit){await route.fulfill({status:500,json:{message:'test unavailable'}});return}result=profit}
   if(path.endsWith('/respectlogistic_read_accounting'))result=account;if(path.endsWith('/respectlogistic_read_service'))result=service;
-  if(path.includes('/rpc/')&&!/read_workspace|read_profit|read_accounting|read_service|crm_read_trip_workspace|driver_extras|read_trip_progress/.test(path))unexpected.push(path);
+  if(path.includes('/rpc/')&&!/read_company_balance|save_company_balance|read_workspace|read_profit|read_accounting|read_service|crm_read_trip_workspace|driver_extras|read_trip_progress/.test(path))unexpected.push(path);
   await route.fulfill({json:result});
  });
  await page.goto('/');await page.getByLabel('Email',{exact:true}).fill('test@example.invalid');await page.getByLabel('Пароль',{exact:true}).fill('test-password');await page.getByRole('button',{name:'Войти',exact:true}).click();
  const dashboard=page.getByRole('region',{name:'Дашборд CRM'});await expect(dashboard).toBeVisible();await expect(dashboard.locator('.overview-customer-row')).toHaveCount(2);
+ await dashboard.getByRole('button',{name:'Указать остаток'}).click();const balanceDialog=page.getByRole('dialog');await balanceDialog.getByLabel('Остаток денег, ₽').fill('60000,50');await balanceDialog.getByRole('button',{name:'Сохранить остаток'}).click();await expect(balanceDialog).not.toBeVisible();await expect(dashboard.locator('.overview-balance strong')).toHaveText(/60\s?000,5/);
  await dashboard.getByLabel('Заказчик обзора').selectOption(customer.id);await expect(dashboard.locator('.overview-customer-row')).toHaveCount(1);await dashboard.getByLabel('Объект обзора').selectOption('site');await dashboard.getByLabel('Услуга обзора').selectOption('Перевозка');
  await expect(dashboard.locator('.overview-finance-stat.revenue>strong')).toHaveText(/1\s?000/);
  const row=dashboard.locator('.overview-customer-row');await expect(row.locator('.overview-customer-due>strong')).toHaveText(/920/);await expect(row.getByText('2 УПД / реестров',{exact:true})).toBeVisible();await expect(row.locator('.overview-customer-steps>div').nth(1).locator('strong')).toHaveText(/1\s?220/);

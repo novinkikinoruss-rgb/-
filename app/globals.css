@@ -438,3 +438,5 @@
 
 /* Fieldset uses an internal layout box; its wrapper owns request-form scrolling. */
 .dispatch-request-fields{padding:0;min-width:0}
+
+.overview-balance-edit{border:1px solid #ffffff50;background:#ffffff18;color:inherit;border-radius:10px;padding:9px 12px;font-size:11px;text-align:left}.overview-balance-edit:hover:not(:disabled){background:#ffffff30}
