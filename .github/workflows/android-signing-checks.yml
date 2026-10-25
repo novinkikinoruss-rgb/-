@@ -1,0 +1,32 @@
+name: Android signing setup checks
+on:
+  push:
+    branches: ['respectlogistic/**']
+    paths:
+      - 'scripts/configure-android-signing.py'
+      - 'tests/android-signing.test.py'
+      - '.github/workflows/android-signing-checks.yml'
+  pull_request:
+    paths:
+      - 'scripts/configure-android-signing.py'
+      - 'tests/android-signing.test.py'
+      - '.github/workflows/android-signing-checks.yml'
+permissions:
+  contents: read
+jobs:
+  signing-setup:
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - run: python tests/android-signing.test.py

@@ -19,3 +19,17 @@ python3 scripts/configure-android-signing.py --keystore "$HOME/.respectlogistic-
 Workflow проверяет подпись APK и её соответствие постоянному SHA256 сертификата. При ручном запуске с `signed=true` отсутствие секретов является ошибкой, а не успешным установщиком. Автоматические проверочные сборки без ключа помечены `unsigned-not-installable`.
 
 Секреты: `DRIVER_ANDROID_KEYSTORE_BASE64`, `DRIVER_ANDROID_STORE_PASSWORD`, `DRIVER_ANDROID_KEY_PASSWORD`, `DRIVER_ANDROID_KEY_ALIAS`, `DRIVER_ANDROID_CERT_SHA256`.
+
+## Windows PowerShell
+
+Скрипт поддерживает Windows: вместо POSIX uid/umask для новой папки ключа применяется защищённый Windows ACL с доступом текущему пользователю и SYSTEM. Для создания ключа нужна отдельная пустая папка; существующие папки с другими файлами/ключами не меняются. Путь передаётся PowerShell как значение переменной окружения, а не вставляется в исполняемый код. Проверка GitHub остаётся перед запросом пароля и созданием ключа.
+
+После исправления/обновления скрипта, находясь в checkout `respectlogistic`, выполните `git pull --ff-only`. Если ключ ещё не создан (`Test-Path` вернул False), команда в том же окне PowerShell:
+
+```powershell
+py -3 scripts/configure-android-signing.py --keystore "$env:USERPROFILE\.respectlogistic-signing\driver-release.p12" --create --build
+```
+
+Пароль вводить только после строки `Keystore password (at least 12 characters):`, затем повторить после `Confirm keystore password:`. При вводе символов не видно. Если вернулось приглашение `PS C:\...>`, программа завершилась, и вводить пароль в командную строку не нужно. Пароль, попавший в чат/журнал команд, повторно не использовать. Уже существующий ключ не создавать заново; повторная настройка использует прежний путь без `--create`.
+
+Отдельный CI `Android signing setup checks` проверяет Windows и Linux с JDK17: генерацию одноразового тестового ключа, экспорт сертификата, пять payload Secrets без реальных вызовов GitHub и сохранение защиты от замены ключа. Эти тесты не генерируют постоянный ключ приложения.
