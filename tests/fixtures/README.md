@@ -1,0 +1,1 @@
+`driver-document.heic` is a generated synthetic transport document (1200×1600, RGB, no customer data), encoded with pillow-heif at quality 85. It contains English test text and volume 12.70 and tests real HEIC decoding plus OCR in Chromium, which cannot decode this file natively. It is an application test fixture, not a photo of a customer's document.

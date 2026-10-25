@@ -6,7 +6,8 @@ const base=process.env.CRM_BROWSER_URL||'http://127.0.0.1:3100';
 const out=process.env.CRM_BROWSER_ARTIFACTS||'/workspace/artifacts/accounting-browser';await mkdir(out,{recursive:true});
 const proxyServer=base.startsWith('https://')?(process.env.HTTPS_PROXY||process.env.HTTP_PROXY):undefined;
 const browser=await chromium.launch({headless:true,args:['--no-sandbox'],...(proxyServer?{proxy:{server:proxyServer}}:{})});
-try{for(const mobile of [false,true]){
+const modes=process.env.CRM_BROWSER_MODE?[process.env.CRM_BROWSER_MODE==='mobile']:[false,true];
+try{for(const mobile of modes){
  const context=await browser.newContext({viewport:mobile?{width:390,height:844}:{width:1440,height:1100},isMobile:mobile,hasTouch:mobile});
  const user={id:'11111111-1111-4111-8111-111111111111',email:'qa@example.invalid',aud:'authenticated',role:'authenticated'};
  const token=Buffer.from(JSON.stringify({alg:'HS256',typ:'JWT'})).toString('base64url')+'.'+Buffer.from(JSON.stringify({sub:user.id,exp:2000000000,role:'authenticated'})).toString('base64url')+'.test';
@@ -43,7 +44,7 @@ try{for(const mobile of [false,true]){
  await page.getByRole('button',{name:'Бухгалтерия',exact:true}).click();
  await page.getByRole('heading',{name:'Бухгалтерия',exact:true}).waitFor();
  await page.locator('.profit-filter').getByRole('combobox').nth(0).selectOption('customer');await page.locator('.profit-filter').getByRole('combobox').nth(1).selectOption('site');await page.locator('.profit-filter').getByRole('combobox').nth(2).selectOption('Вывоз');await page.getByRole('button',{name:'Применить',exact:true}).click();
- await page.getByRole('checkbox',{name:'Выбрать все рейсы',exact:true}).check();
+ assert.equal(await page.locator('.accounting-selection-total strong').textContent(),'10 м³');await page.getByRole('checkbox',{name:'Выбрать все рейсы',exact:true}).check();
  await page.getByRole('button',{name:'Счёт за услуги',exact:true}).click();await page.getByRole('button',{name:'Создать черновик',exact:true}).click();await page.getByRole('button',{name:'Сформировать',exact:true}).click();
  let dialog=page.getByRole('dialog');await dialog.getByText('Сформирован',{exact:true}).waitFor();const invoice=workspace.documents[0];
  await page.screenshot({path:out+'/'+(mobile?'mobile':'desktop')+'-invoice.png',fullPage:true});
@@ -54,11 +55,12 @@ try{for(const mobile of [false,true]){
  await page.getByRole('button',{name:'Оплата',exact:true}).click();await page.getByLabel('Всего оплачено на сегодня, ₽ *').fill('200');await page.getByRole('button',{name:'Сохранить',exact:true}).click();await page.getByRole('dialog').getByRole('button',{name:'Закрыть',exact:true}).click();
  await page.getByRole('button',{name:'Счета и документы',exact:true}).click();await page.getByRole('row').filter({hasText:invoice.number}).getByRole('button',{name:'Открыть',exact:true}).click();await page.getByRole('button',{name:'Зачесть аванс',exact:true}).click();await page.getByLabel('Зачесть в этот счёт, ₽ *').fill('200');await page.getByRole('button',{name:'Сохранить',exact:true}).click();await page.getByRole('dialog').getByText(/Зачтено:.*200/).waitFor();assert.equal(workspace.credits.length,1);
  const downloadPromise=page.waitForEvent('download');await page.getByRole('button',{name:'Реестр CSV',exact:true}).click();const download=await downloadPromise;assert.ok(download.suggestedFilename().endsWith('.csv'));const downloaded=await readFile(await download.path(),'utf8');assert.ok(downloaded.includes('1220'));
- await page.getByRole('dialog').getByRole('button',{name:'Закрыть',exact:true}).click();await page.getByRole('button',{name:'Оказанные услуги',exact:true}).click();await page.getByRole('checkbox',{name:'Выбрать все рейсы',exact:true}).check();await page.getByRole('button',{name:'УПД',exact:true}).click();await page.getByRole('button',{name:'Создать черновик',exact:true}).click();
- const completeButton=page.getByRole('button',{name:'Сформировать и завершить рейсы',exact:true});assert.ok(await completeButton.isDisabled());await page.getByRole('dialog').getByRole('checkbox').check();await completeButton.click();await page.getByRole('dialog').getByText('Сформирован',{exact:true}).waitFor();assert.equal(t.status,'delivered');assert.equal(t.documents_confirmed,false);await page.getByRole('dialog').getByRole('button',{name:'Закрыть',exact:true}).click();
+ await page.getByRole('button',{name:'Создать УПД к счёту',exact:true}).click();await page.getByRole('dialog').getByText('К счёту '+invoice.number,{exact:true}).waitFor();await page.getByRole('button',{name:'Создать черновик',exact:true}).click();assert.equal(workspace.documents[0].invoice_id,invoice.id);
+ const completeButton=page.getByRole('button',{name:'Сформировать и завершить рейсы',exact:true});assert.ok(await completeButton.isDisabled());await page.getByRole('dialog').getByRole('checkbox').check();await completeButton.click();await page.getByRole('dialog').getByText('Сформирован',{exact:true}).waitFor();assert.equal(t.status,'delivered');assert.equal(t.documents_confirmed,false);
+ await page.getByRole('dialog').getByRole('button',{name:invoice.number,exact:true}).click();await page.getByRole('button',{name:'Создать реестр к счёту',exact:true}).click();await page.getByRole('button',{name:'Создать черновик',exact:true}).click();assert.equal(workspace.documents[0].invoice_id,invoice.id);assert.equal(workspace.documents[0].kind,'registry');await page.getByRole('dialog').getByRole('button',{name:'Закрыть',exact:true}).click();
  await page.screenshot({path:out+'/'+(mobile?'mobile':'desktop')+'-accounting.png',fullPage:true});
  const overflow=await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth+1);assert.equal(overflow,false,'page overflows viewport');
  if(mobile)await page.getByRole('button',{name:'Открыть меню',exact:true}).click();await page.getByRole('button',{name:'Рейсы',exact:true}).click();await page.locator('.accounting-trip-documents').getByRole('button',{name:/УПД/}).waitFor();await page.getByText('Нет документов от водителя',{exact:true}).waitFor();
  assert.deepEqual(errors,[]);await page.screenshot({path:out+'/'+(mobile?'mobile':'desktop')+'-trip-documents.png',fullPage:true});
- console.log('PASS '+(mobile?'mobile':'desktop')+': filters, selection, invoice/advance, payments/credit, CSV, UPD explicit completion, trip attachment and separate driver-document status; no JS errors or page overflow. Controlled RPC fixtures.');await context.close();
+ console.log('PASS '+(mobile?'mobile':'desktop')+': filters, selection, invoice/advance, payments/credit, CSV, linked invoice/UPD/registry, explicit completion, trip attachment and separate driver-document status; no JS errors or page overflow. Controlled RPC fixtures.');await context.close();
 }}finally{await browser.close()}

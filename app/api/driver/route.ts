@@ -18,7 +18,7 @@ export async function POST(request:Request){
    const token=request.headers.get('authorization')?.replace(/^Bearer /,'');
    if(!token||! /^[a-f0-9]{64}$/.test(token))return Response.json({message:'Войдите в приложение'},{status:401,headers});params.p_token=token;
   }
-  const response=await fetch(base.replace(/\/$/,'')+'/rest/v1/rpc/respectlogistic_'+actions[action],{method:'POST',headers:{apikey:key,'Content-Type':'application/json'},body:JSON.stringify(params),signal:AbortSignal.timeout(20000),cache:'no-store',redirect:'error'});
+  const response=await fetch(base.replace(/\/$/,'')+'/rest/v1/rpc/respectlogistic_'+actions[action],{method:'POST',headers:{apikey:key,'Content-Type':'application/json'},body:JSON.stringify(params),signal:AbortSignal.timeout(action==='mobile'&&body.p_base64?60000:40000),cache:'no-store',redirect:'error'});
   const text=await response.text();const result=text?JSON.parse(text):null;
   if(!response.ok)return Response.json({message:result?.message||'Не удалось выполнить действие'},{status:result?.message==='Сначала смените временный пароль'?409:result?.code==='28000'?401:400,headers});
   if(action==='login'&&result?.error)return Response.json({message:result.error},{status:401,headers});

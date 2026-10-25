@@ -62,6 +62,7 @@ jobs:
           for migration in supabase/migrations/*.sql; do psql -d respectlogistic_dispatch_test -v ON_ERROR_STOP=1 -f "$migration"; done
           psql -d respectlogistic_dispatch_test -v ON_ERROR_STOP=1 -f tests/dispatch.integration.sql
           psql -d respectlogistic_dispatch_test -v ON_ERROR_STOP=1 -f tests/driver-mobile.integration.sql
+          psql -d respectlogistic_dispatch_test -v ON_ERROR_STOP=1 -f tests/accounting-invoice-links.integration.sql
           psql -d respectlogistic_dispatch_test -v ON_ERROR_STOP=1 -f tests/company-balance.integration.sql
   authentication:
     runs-on: ubuntu-latest

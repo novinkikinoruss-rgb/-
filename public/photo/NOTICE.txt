@@ -1,0 +1,3 @@
+libheif-js 1.23.5 — https://github.com/catdad-experiments/libheif-js/tree/v1.23.5
+libheif-bundle.js is the unmodified dynamically loaded WASM distribution from the pinned npm package. LGPL license texts are included in libheif-LICENSE and decoder-LICENSE; source/build scripts are available in the linked upstream repository and its scripts/install.js.
+prepare-worker.js is the application's independent worker, which loads this decoder only when native HEIC decoding is unavailable.

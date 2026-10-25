@@ -160,3 +160,34 @@ create table public.crm_payroll_deductions(id uuid primary key,owner_id uuid,acc
 create table public.respectlogistic_driver_shift_reports(id uuid primary key,owner_id uuid,driver_id uuid,vehicle_id uuid,shift_date date,odometer numeric,technical_note text default '',comment text default '',status text default 'draft',modified_at timestamptz default clock_timestamp());
 create unique index mobile_fixture_report on respectlogistic_driver_shift_reports(driver_id,vehicle_id,shift_date) where status not in ('rejected','cancelled');
 create table public.respectlogistic_driver_shift_files(id uuid primary key,report_id uuid,owner_id uuid,driver_id uuid,trip_id uuid,kind text,file_name text,mime_type text,file_size integer,data bytea);
+
+-- Accounting schema required by the additive invoice-link migration.
+-- Isolated accounting documents. Writes are validated RPCs, snapshots stay immutable.
+create table public.respectlogistic_accounting_company(owner_id uuid primary key default auth.uid() references auth.users(id),payload jsonb not null,modified_at timestamptz not null default clock_timestamp());
+create table public.respectlogistic_accounting_documents(
+ id uuid primary key,owner_id uuid not null default auth.uid() references auth.users(id),kind text not null check(kind in ('invoice','advance','upd','registry')),
+ customer_id uuid not null references public.respectlogistic_customers(id),site_id uuid references public.respectlogistic_sites(id),service_name text,
+ number text not null,document_date date not null,due_date date,status text not null default 'draft' check(status in ('draft','issued','sent','signed','cancelled')),
+ total numeric(16,2) not null check(total>0),vat numeric(16,2) not null,paid_amount numeric(16,2) not null default 0 check(paid_amount>=0 and paid_amount<=total),
+ snapshot jsonb not null,notes text not null default '',created_at timestamptz not null default clock_timestamp(),modified_at timestamptz not null default clock_timestamp(),unique(owner_id,kind,number)
+);
+create table public.respectlogistic_accounting_trips(document_id uuid not null references public.respectlogistic_accounting_documents(id),trip_id uuid not null references public.crm_trips(id),owner_id uuid not null references auth.users(id),kind text not null,active boolean not null default true,primary key(document_id,trip_id));
+create unique index accounting_trip_once on public.respectlogistic_accounting_trips(owner_id,kind,trip_id) where active;
+create table public.respectlogistic_accounting_counters(owner_id uuid not null references auth.users(id),kind text not null,scope text not null,year integer not null,value integer not null,primary key(owner_id,kind,scope,year));
+create table public.respectlogistic_accounting_credits(id uuid primary key,owner_id uuid not null references auth.users(id),advance_id uuid not null references public.respectlogistic_accounting_documents(id),invoice_id uuid not null references public.respectlogistic_accounting_documents(id),amount numeric(16,2) not null check(amount>0),created_at timestamptz not null default clock_timestamp());
+create table public.respectlogistic_accounting_history(id uuid primary key default gen_random_uuid(),owner_id uuid not null references auth.users(id),document_id uuid not null references public.respectlogistic_accounting_documents(id),action text not null,detail jsonb not null default '{}',created_at timestamptz not null default clock_timestamp());
+do $$declare t text;begin foreach t in array array['company','documents','trips','counters','credits','history'] loop
+ execute format('alter table public.respectlogistic_accounting_%I enable row level security',t);
+ execute format('create policy accounting_owner on public.respectlogistic_accounting_%I for select to authenticated using(owner_id=(select auth.uid()))',t);
+ execute format('revoke all on public.respectlogistic_accounting_%I from public,anon,authenticated',t);
+ execute format('grant select on public.respectlogistic_accounting_%I to authenticated',t);
+end loop;end$$;
+create index accounting_documents_owner_date on public.respectlogistic_accounting_documents(owner_id,document_date desc);
+create index accounting_trips_trip on public.respectlogistic_accounting_trips(trip_id);
+create index accounting_credits_advance on public.respectlogistic_accounting_credits(advance_id);
+create index accounting_credits_invoice on public.respectlogistic_accounting_credits(invoice_id);
+create index accounting_history_document on public.respectlogistic_accounting_history(document_id,created_at);
+
+
+create view public.rl_crm_trips with(security_invoker=true) as select * from public.crm_trips where owner_id=auth.uid() and app_scope='respectlogistic';
+grant select on public.rl_crm_trips to authenticated;
