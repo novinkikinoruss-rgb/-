@@ -70,6 +70,12 @@ class SigningTests(unittest.TestCase):
             args=types.SimpleNamespace(keystore=str(path),create=True,alias='driver-release',build=True)
             original=signing.run;secrets={};builds=[];password='disposable-test-password-only'
             def fake_github(command,payload=None,env=None):
+                if command[0]=='powershell.exe':
+                    # This runs before any password prompt and contains only the test
+                    # directory path/ACL, so CI can report its diagnostic safely.
+                    result=subprocess.run(command,capture_output=True,env=env)
+                    self.assertEqual(result.returncode,0,result.stderr.decode(errors='replace'))
+                    return result.stdout
                 if command[0]!='gh':return original(command,payload=payload,env=env)
                 if command[1]=='api':return b'{}'
                 if command[1:3]==['secret','list']:return b''
