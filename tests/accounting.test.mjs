@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {accountingVolumes,accountingLine,accountingBalance,accountingTrips,accountingDocuments,accountingHtml,accountingCsv} from '../lib/accounting.ts';
+import {accountingRemovalPlan,accountingVolumes,accountingLine,accountingBalance,accountingTrips,accountingDocuments,accountingHtml,accountingCsv} from '../lib/accounting.ts';
 import {paymentCalendar} from '../lib/finance-planning.ts';
 const filter={from:'2026-10-01',to:'2026-10-31',customer:'c',site:'',service:''};
 const document=(changes={})=>({id:'doc',number:'СЧ-1/2026',kind:'invoice',customer_id:'c',site_id:'s',service_name:'Work',document_date:'2026-10-10',due_date:'2026-10-20',status:'issued',total:122,vat:22,paid_amount:20,notes:'',snapshot:{seller:{name:'Seller'},customer:{name:'Customer'},items:[{service:'Work',quantity:1,unit:'trip',gross:122,vat:22,net:100,price:122,site_id:'s'}],vat_rate:22},...changes});
@@ -13,3 +13,5 @@ test('accounting calendar uses actual invoices and due dates; a paid advance cre
 test('cash plus advance allocations conserve tiny balances across service filters without negative cents',()=>{const d=document({total:0.02,paid_amount:0.01});d.snapshot.items=[{site_id:'s1',service:'A',gross:0.01},{site_id:'s2',service:'B',gross:0.01}];const base={trips:[],customers:[],sites:[],vehicles:[],carriers:[],expenses:[],invoices:[],accruals:[],payments:[],deductions:[],accounting_invoices:[{...d,credited:0.01}]};for(const site of ['','s1','s2'])assert.equal(paymentCalendar(base,{...filter,site},'2026-10-25').incoming,0)});
 
 test('selection totals keep tonnes and cubic metres separate',()=>{assert.equal(accountingVolumes([{volume:10.1,unit:'т'},{volume:2.2,unit:'т'},{volume:5,unit:'м³'}]),'12,3 т · 5 м³')});
+
+test('bulk removal orders closing documents first and archives paid, signed and credited records',()=>{const docs=[document({id:'invoice',kind:'invoice',paid_amount:0}),document({id:'advance',kind:'advance',paid_amount:100}),document({id:'upd',kind:'upd',paid_amount:0}),document({id:'signed',kind:'registry',status:'signed',paid_amount:0}),document({id:'credited',paid_amount:0})],before=structuredClone(docs);const plan=accountingRemovalPlan(docs,[{invoice_id:'credited',advance_id:'advance',amount:1}]);assert.deepEqual(plan.map(p=>[p.document.id,p.action]),[['upd','delete'],['signed','archive'],['invoice','delete'],['credited','archive'],['advance','archive']]);assert.deepEqual(docs,before)});

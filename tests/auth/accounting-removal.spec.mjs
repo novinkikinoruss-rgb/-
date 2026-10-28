@@ -1,0 +1,28 @@
+import {test,expect} from '@playwright/test';
+test('Accounting hides stale documents and bulk deletion preserves protected records and reports partial errors',async({page},info)=>{
+ const uid='00000000-0000-4000-8000-000000000099',user={id:uid,aud:'authenticated',role:'authenticated',email:'test@example.invalid',app_metadata:{},user_metadata:{}};
+ const token=Buffer.from('{"alg":"HS256"}').toString('base64url')+'.'+Buffer.from(JSON.stringify({sub:uid,exp:Math.floor(Date.now()/1000)+3600})).toString('base64url')+'.fixture',day=new Date().toLocaleDateString('en-CA',{timeZone:'Europe/Moscow'});
+ const doc=(id,kind='invoice',extra={})=>({id,number:id,kind,customer_id:'c',site_id:'s',service_name:'Услуга',document_date:day,due_date:null,status:'draft',total:122,vat:22,paid_amount:0,notes:'',modified_at:'v1',snapshot:{seller:{},customer:{},items:kind==='advance'?[{service:'Аванс',quantity:1,unit:'усл.',gross:122}]:[{trip_id:'live',service:'Услуга',quantity:1,unit:'т',gross:122}],vat_rate:22},...extra});
+ const documents=[doc('СЧ-рабочий'),doc('УПД-рабочий','upd',{invoice_id:'СЧ-рабочий'}),doc('РЕЕСТР-рабочий','registry',{invoice_id:'СЧ-рабочий'}),doc('АВ-оплачен','advance',{status:'signed',paid_amount:122}),doc('СЧ-старый'),doc('СЧ-отменён','invoice',{status:'cancelled'}),doc('СЧ-удалён','invoice',{deleted_at:day}),doc('СЧ-смешанный')];
+ documents.find(d=>d.id==='СЧ-смешанный').snapshot.items.push({trip_id:'gone',service:'Услуга',quantity:1,unit:'т',gross:122});
+ const links=documents.filter(d=>d.kind!=='advance').map(d=>({document_id:d.id,trip_id:d.id==='СЧ-старый'?'gone':'live',active:d.status!=='cancelled',kind:d.kind}));
+ const data={documents,links,trips:[{id:'live',trip_number:'1',trip_date:day,status:'delivered',customer_id:'c',site_id:'s',volume:1,unit:'т',unit_price:122,service_name:'Услуга'}],customers:[{id:'c',name:'Заказчик'}],sites:[{id:'s',customer_id:'c',name:'Объект'}],vehicles:[],company:{},credits:[],history:[]};
+ const calls=[];let failRegistry=true;
+ await page.route('**/supabase/**',async route=>{const path=new URL(route.request().url()).pathname;let result={};
+  if(path.endsWith('/token'))result={access_token:token,refresh_token:'fixture',expires_in:3600,token_type:'bearer',user};if(path.endsWith('/user'))result=user;
+  if(path.endsWith('/respectlogistic_read_workspace'))result={revision:0,customers:[],contracts:[],specifications:[],sites:[],documents:[],activity:[]};
+  if(path.endsWith('/respectlogistic_read_accounting'))result=data;
+  if(path.endsWith('/respectlogistic_manage_accounting_document')){const body=route.request().postDataJSON(),d=documents.find(d=>d.id===body.p_id);calls.push([d.id,body.p_action]);expect(body.p_expected).toBe(d.modified_at);
+   if(failRegistry&&d.kind==='registry'||d.id==='СЧ-рабочий'&&documents.some(c=>c.invoice_id===d.id&&!c.deleted_at))return route.fulfill({status:409,json:{message:'Документ изменён или связан с действующим реестром'}});
+   d.deleted_at=day;if(body.p_action==='delete'){d.status='cancelled';links.filter(l=>l.document_id===d.id).forEach(l=>l.active=false)}d.modified_at='v2';result=d.id;
+  }
+  await route.fulfill({json:result});
+ });
+ await page.goto('/?workspace=accounting');await page.getByLabel('Email',{exact:true}).fill(user.email);await page.getByLabel('Пароль',{exact:true}).fill('fixture-password');await page.getByRole('button',{name:'Войти',exact:true}).click();await page.getByRole('button',{name:'Счета и документы',exact:true}).click();
+ const table=page.locator('.profit-section table');await expect(table.locator('tbody tr')).toHaveCount(4);await expect(table).not.toContainText('СЧ-старый');await expect(table).not.toContainText('СЧ-смешанный');
+ const archive=page.getByRole('checkbox',{name:'Показать архив, отменённые и документы удалённых рейсов',exact:true});await archive.check();await expect(table.locator('tbody tr')).toHaveCount(8);await expect(table).toContainText('Исходные рейсы или счёт удалены / исключены');await expect(page.getByRole('checkbox',{name:'Выбрать документ СЧ-удалён',exact:true})).toBeDisabled();await page.screenshot({path:'test-results/accounting-archive-'+info.project.name+'.png',fullPage:true});await archive.uncheck();
+ await page.getByRole('checkbox',{name:'Выбрать все документы',exact:true}).check();const remove=page.getByRole('button',{name:'Удалить выбранные документы',exact:true});page.once('dialog',dialog=>dialog.dismiss());await remove.click();expect(calls).toHaveLength(0);
+ page.once('dialog',async dialog=>{expect(dialog.message()).toContain('Оплаченные и подписанные (1)');await dialog.accept()});await remove.click();await expect(page.locator('.accounting-workspace [role=alert]')).toContainText('Не удалось обработать 2');await expect(table.locator('tbody tr')).toHaveCount(2);expect(calls).toEqual([['УПД-рабочий','delete'],['РЕЕСТР-рабочий','delete'],['СЧ-рабочий','delete'],['АВ-оплачен','archive']]);expect(documents.find(d=>d.id==='АВ-оплачен').status).toBe('signed');expect(documents.find(d=>d.id==='АВ-оплачен').paid_amount).toBe(122);
+ await expect(page.getByRole('checkbox',{name:'Выбрать документ СЧ-рабочий',exact:true})).toBeChecked();failRegistry=false;page.once('dialog',dialog=>dialog.accept());await remove.click();await expect(table.locator('tbody tr')).toHaveCount(0);await expect(page.locator('.accounting-workspace [role=alert]')).toHaveCount(0);expect(calls.slice(-2)).toEqual([['РЕЕСТР-рабочий','delete'],['СЧ-рабочий','delete']]);await expect(remove).toBeDisabled();
+ await archive.check();await expect(table.locator('tbody tr')).toHaveCount(8);await expect(table.getByRole('row').filter({hasText:'АВ-оплачен'})).toContainText('Подписан');expect(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth)).toBe(false);
+});

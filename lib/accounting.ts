@@ -24,3 +24,9 @@ export function downloadAccounting(doc:AccountingDocument,format:'html'|'csv'='h
 export function printAccounting(doc:AccountingDocument){const w=window.open('','_blank');if(!w)throw Error('Разрешите открытие окна печати в браузере');w.document.write(accountingHtml(doc));w.document.close();w.focus();setTimeout(()=>w.print(),300)}
 
 export function accountingVolumes(rows:{volume:number;unit:string}[]){const units=new Map<string,number>();for(const row of rows)units.set(row.unit,(units.get(row.unit)||0)+Number(row.volume));return [...units].map(([unit,volume])=>new Intl.NumberFormat('ru-RU',{maximumFractionDigits:3}).format(volume)+' '+unit).join(' · ')||'0';}
+
+// Closing documents must be cancelled before their invoice; protected financial records are archived.
+export function accountingRemovalPlan(documents:AccountingDocument[],credits:AccountingCredit[]){
+ const priority:Record<AccountingKind,number>={upd:0,registry:0,invoice:1,advance:2};
+ return [...documents].sort((a,b)=>priority[a.kind]-priority[b.kind]).map(document=>({document,action:(document.status==='signed'||Number(document.paid_amount)>0||accountingBalance(document,credits).credited>0?'archive':'delete') as 'archive'|'delete'}));
+}
