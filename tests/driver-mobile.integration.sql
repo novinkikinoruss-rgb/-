@@ -51,6 +51,7 @@ do $$declare actor uuid=auth.uid();cid uuid=gen_random_uuid();co uuid=gen_random
  if jsonb_array_length(respectlogistic_driver_mobile(other_token)->'mobile_runs')<>0 then raise exception 'TEST: foreign driver read run';end if;
  if jsonb_array_length(respectlogistic_driver_mobile(other_token)->'salary')<>0 then raise exception 'TEST: foreign driver salary';end if;
  begin perform respectlogistic_driver_mobile(other_token,'file',jsonb_build_object('id',photoid));raise exception using message='TEST: foreign photo read',errcode='P0002';exception when sqlstate 'P0001' then null;end;
+ if not exists(select 1 from jsonb_array_elements(respectlogistic_driver_extras(token)->'shifts') x where x->>'id'=(select report_id::text from respectlogistic_driver_shift_files where id=photoid)) then raise exception 'TEST: live report missing';end if;
  -- Deleted trips and their files disappear even when a driver keeps an old ID.
  perform set_config('request.jwt.claim.sub',actor::text,true);
  update crm_trips set deleted_at=clock_timestamp() where id=trip;
@@ -59,6 +60,8 @@ do $$declare actor uuid=auth.uid();cid uuid=gen_random_uuid();co uuid=gen_random
  begin perform respectlogistic_driver_mobile(token,'file',jsonb_build_object('id',photoid));raise exception using message='TEST: deleted trip photo accessible',errcode='P0002';exception when sqlstate 'P0001' then null;end;
  begin perform respectlogistic_driver_file(photoid,token);raise exception using message='TEST: deleted legacy photo accessible',errcode='P0002';exception when sqlstate 'P0001' then null;end;
  perform set_config('request.jwt.claim.sub',actor::text,true);
+ if exists(select 1 from jsonb_array_elements(respectlogistic_driver_extras(token)->'shifts') x where x->>'id'=(select report_id::text from respectlogistic_driver_shift_files where id=photoid)) then raise exception 'TEST: deleted trip report visible';end if;
+ if not exists(select 1 from jsonb_array_elements(respectlogistic_driver_extras()->'shifts') x where x->>'id'=(select report_id::text from respectlogistic_driver_shift_files where id=photoid)) then raise exception 'TEST: owner report audit lost';end if;
  update crm_trips set deleted_at=null where id=trip;
  update respectlogistic_dispatch_requests set cancelled_at=clock_timestamp() where id=rid;
  perform set_config('request.jwt.claim.sub','',true);
@@ -66,6 +69,10 @@ do $$declare actor uuid=auth.uid();cid uuid=gen_random_uuid();co uuid=gen_random
  perform set_config('request.jwt.claim.sub',actor::text,true);
  update respectlogistic_dispatch_requests set cancelled_at=null where id=rid;
  perform set_config('request.jwt.claim.sub','',true);
+ perform set_config('request.jwt.claim.sub',actor::text,true);
+ insert into respectlogistic_driver_shift_reports(id,owner_id,driver_id,vehicle_id,shift_date,odometer,comment) values(gen_random_uuid(),actor,d1,veh,current_date-2,0,'MANUAL REPORT');
+ perform set_config('request.jwt.claim.sub','',true);
+ if not exists(select 1 from jsonb_array_elements(respectlogistic_driver_extras(token)->'shifts') x where x->>'comment'='MANUAL REPORT') then raise exception 'TEST: independent report hidden';end if;
  perform respectlogistic_driver_mobile(token,'expense',jsonb_build_object('id',expenseid,'kind','fuel','vehicle_id',veh,'date',current_date,'litres',100,'price',65,'total',6500));
  perform respectlogistic_driver_mobile(token,'photo',jsonb_build_object('id',gen_random_uuid(),'expense_id',expenseid,'kind','receipt'),'/9j/2Q==');
  begin perform respectlogistic_driver_mobile(token,'expense',jsonb_build_object('id',gen_random_uuid(),'kind','fuel','vehicle_id',veh,'date',current_date,'litres',100,'price',65,'total',7000));raise exception using message='TEST: wrong fuel total',errcode='P0002';exception when sqlstate 'P0001' then null;end;

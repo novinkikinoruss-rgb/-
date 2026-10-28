@@ -11,7 +11,7 @@
 4. «Clients → Create client → Web application». Название: CRM Render.
    - Authorized JavaScript origins: `https://respectlogistic.onrender.com`
    - Authorized redirect URIs: `https://respectlogistic.onrender.com/api/google-sync/callback`
-5. Откройте https://respectlogistic.onrender.com/?workspace=trips . Войдите как администратор. Раскройте «Google Диск и реестр → Как подключить Google — пошагово».
+5. Откройте https://respectlogistic.onrender.com/?workspace=trips&googleSettings=open . Войдите как администратор. Нажмите значок Google Диска вверху раздела «Рейсы». В открывшемся окне раскройте инструкцию подключения.
 6. Вставьте **Client ID** и **Client Secret** в поля CRM. Не отправляйте секрет в чат, по почте или в скриншоте. Нажмите «Подключить Google». Выберите аккаунт владельца папки и подтвердите доступ.
 7. После возврата нажмите «Синхронизировать сейчас». Появится время успешной синхронизации; проверьте вкладки «Рейсы», «Закрывающие», «Файлы» и документы в папке.
 
