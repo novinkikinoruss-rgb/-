@@ -51,6 +51,21 @@ do $$declare actor uuid=auth.uid();cid uuid=gen_random_uuid();co uuid=gen_random
  if jsonb_array_length(respectlogistic_driver_mobile(other_token)->'mobile_runs')<>0 then raise exception 'TEST: foreign driver read run';end if;
  if jsonb_array_length(respectlogistic_driver_mobile(other_token)->'salary')<>0 then raise exception 'TEST: foreign driver salary';end if;
  begin perform respectlogistic_driver_mobile(other_token,'file',jsonb_build_object('id',photoid));raise exception using message='TEST: foreign photo read',errcode='P0002';exception when sqlstate 'P0001' then null;end;
+ -- Deleted trips and their files disappear even when a driver keeps an old ID.
+ perform set_config('request.jwt.claim.sub',actor::text,true);
+ update crm_trips set deleted_at=clock_timestamp() where id=trip;
+ perform set_config('request.jwt.claim.sub','',true);
+ if exists(select 1 from jsonb_array_elements(respectlogistic_driver_mobile(token)->'mobile_runs') x where x->>'trip_id'=trip::text) then raise exception 'TEST: deleted trip history visible';end if;
+ begin perform respectlogistic_driver_mobile(token,'file',jsonb_build_object('id',photoid));raise exception using message='TEST: deleted trip photo accessible',errcode='P0002';exception when sqlstate 'P0001' then null;end;
+ begin perform respectlogistic_driver_file(photoid,token);raise exception using message='TEST: deleted legacy photo accessible',errcode='P0002';exception when sqlstate 'P0001' then null;end;
+ perform set_config('request.jwt.claim.sub',actor::text,true);
+ update crm_trips set deleted_at=null where id=trip;
+ update respectlogistic_dispatch_requests set cancelled_at=clock_timestamp() where id=rid;
+ perform set_config('request.jwt.claim.sub','',true);
+ if jsonb_array_length(respectlogistic_driver_mobile(token)->'mobile_runs')<>0 or jsonb_array_length(respectlogistic_driver_mobile(token)->'mobile_photos')<>0 then raise exception 'TEST: cancelled request history visible';end if;
+ perform set_config('request.jwt.claim.sub',actor::text,true);
+ update respectlogistic_dispatch_requests set cancelled_at=null where id=rid;
+ perform set_config('request.jwt.claim.sub','',true);
  perform respectlogistic_driver_mobile(token,'expense',jsonb_build_object('id',expenseid,'kind','fuel','vehicle_id',veh,'date',current_date,'litres',100,'price',65,'total',6500));
  perform respectlogistic_driver_mobile(token,'photo',jsonb_build_object('id',gen_random_uuid(),'expense_id',expenseid,'kind','receipt'),'/9j/2Q==');
  begin perform respectlogistic_driver_mobile(token,'expense',jsonb_build_object('id',gen_random_uuid(),'kind','fuel','vehicle_id',veh,'date',current_date,'litres',100,'price',65,'total',7000));raise exception using message='TEST: wrong fuel total',errcode='P0002';exception when sqlstate 'P0001' then null;end;

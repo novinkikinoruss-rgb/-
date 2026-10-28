@@ -8,6 +8,7 @@ test('Trip attachments appear after upload, download original bytes and link to 
  let files=[],downloadRequests=0,failDownload=false;
  const folder='https://drive.google.com/drive/folders/test-trip-folder';
  const trip={id:tripId,trip_number:'42',trip_date:'2026-10-24',customer_id:null,site_id:null,vehicle_id:null,driver_id:null,carrier_id:null,loading_address:'Погрузка',unloading_address:'Выгрузка',volume:10,unit:'м³',unit_price:100,service_name:'Перевозка',status:'assigned',modified_at:'2026-10-24T00:00:00Z',locked:false,documents_confirmed:false};
+ await page.route('**/api/google-sync',async route=>{const b=route.request().postDataJSON();expect(route.request().headers().authorization).toBe('Bearer '+token);if(b.action==='status')return route.fulfill({json:{configured:false,hasClient:false}});expect(b.action).toBe('connect');expect(b.clientId).toBe('fixture.apps.googleusercontent.com');expect(b.clientSecret).toBe('fixture-secret');return route.fulfill({status:400,json:{message:'Fixture: подключение отклонено'}})});
  await page.route('**/api/trip-drive',route=>route.fulfill({json:{configured:false}}));
  await page.route('**/api/trip-files',async route=>{
   expect(route.request().method()).toBe('POST');
@@ -51,5 +52,7 @@ test('Trip attachments appear after upload, download original bytes and link to 
  expect(downloadRequests).toBeGreaterThan(0);
  failDownload=true;await downloadButton.click();await expect(documents.getByRole('alert')).toContainText('Хранилище временно недоступно');
  await expect(downloadButton).toBeEnabled();
+ const sync=page.getByRole('region',{name:'Google Диск и реестр'});await sync.locator('summary').click();await expect(sync.getByText('https://respectlogistic.onrender.com/api/google-sync/callback',{exact:true})).toBeVisible();await sync.getByLabel('Client ID',{exact:true}).fill('fixture.apps.googleusercontent.com');await sync.getByLabel('Client Secret',{exact:true}).fill('fixture-secret');await sync.getByRole('button',{name:'Подключить Google',exact:true}).click();await expect(sync.getByRole('status')).toContainText('Fixture: подключение отклонено');await expect(sync.getByRole('button',{name:'Подключить Google',exact:true})).toBeEnabled();
+ const originalViewport=page.viewportSize();await page.setViewportSize({...originalViewport,height:540});await page.getByRole('button',{name:'Редактировать 42',exact:true}).click();const edit=page.getByRole('dialog');const formBody=edit.locator('.form-body');await formBody.hover();await page.mouse.wheel(0,3000);await expect.poll(()=>formBody.evaluate(el=>el.scrollTop)).toBeGreaterThan(0);await expect(edit.getByRole('button',{name:'Сохранить рейс',exact:true})).toBeInViewport();await edit.getByRole('button',{name:'Закрыть окно'}).click();await page.setViewportSize(originalViewport);
  await page.screenshot({path:'test-results/trip-documents-'+info.project.name+'.png',fullPage:true});
 });

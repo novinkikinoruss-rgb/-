@@ -1,0 +1,11 @@
+import {createHash,randomBytes} from 'node:crypto';
+export const GOOGLE_COOKIE='__Host-rl-google-link';
+export const CALLBACK_PATH='/api/google-sync/callback';
+export function googleCookie(value:string,age=600){return `${GOOGLE_COOKIE}=${value}; Path=/; Max-Age=${age}; HttpOnly; Secure; SameSite=Lax`}
+export function googleState(authorization:string){const state=randomBytes(24).toString('hex'),verifier=randomBytes(32).toString('base64url');return {state,verifier,authorization,expires:Date.now()+600000}}
+export function googleAuthorization(clientId:string,origin:string,state:{state:string;verifier:string}){const url=new URL('https://accounts.google.com/o/oauth2/v2/auth');url.search=new URLSearchParams({client_id:clientId,redirect_uri:origin+CALLBACK_PATH,response_type:'code',scope:'https://www.googleapis.com/auth/drive https://www.googleapis.com/auth/spreadsheets',access_type:'offline',prompt:'consent',state:state.state,code_challenge:createHash('sha256').update(state.verifier).digest('base64url'),code_challenge_method:'S256'}).toString();return url.href}
+export async function ownerRpc(authorization:string,name:string,params:Record<string,unknown>={}){
+ const base=process.env.NEXT_PUBLIC_SUPABASE_URL,key=process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;if(!authorization.startsWith('Bearer ')||!base||!key)throw Error('Войдите в CRM');
+ const r=await fetch(base+'/rest/v1/rpc/'+name,{method:'POST',headers:{Authorization:authorization,apikey:key,'Content-Type':'application/json'},body:JSON.stringify(params),cache:'no-store',signal:AbortSignal.timeout(30000)});const result=await r.json();if(!r.ok)throw Error(result.message||'Не удалось проверить доступ к CRM');return result;
+}
+export async function googleAccessToken(cfg:Record<string,string>){if(!cfg.clientId||!cfg.clientSecret||!cfg.refreshToken)throw Error('Подключите Google в настройках синхронизации');const r=await fetch('https://oauth2.googleapis.com/token',{method:'POST',body:new URLSearchParams({client_id:cfg.clientId,client_secret:cfg.clientSecret,refresh_token:cfg.refreshToken,grant_type:'refresh_token'}),signal:AbortSignal.timeout(25000),cache:'no-store'});const token=await r.json();if(!r.ok||!token.access_token)throw Error('Google отклонил подключение. Нажмите «Подключить повторно» и подтвердите доступ.');return token.access_token as string}

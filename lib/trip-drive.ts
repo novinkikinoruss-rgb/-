@@ -1,11 +1,14 @@
 export type ExportManifest={trip_id:string;version:string;customer:string;site:string;service:string;date:string;plate:string;files:{id:string;file_name:string;mime_type:string;storage_path:string}[]};
-type Settings={clientId:string;clientSecret:string;refreshToken:string;rootFolder:string};
+type Settings={accessToken?:string;clientId:string;clientSecret:string;refreshToken:string;rootFolder:string};
 const quote=(s:string)=>s.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
 export function archiveSegments(m:ExportManifest){const segments=[m.customer,m.site,m.service,m.date,m.plate];if(segments.some(v=>typeof v!=='string'||!v.trim()))throw Error('Заполните заказчика, объект, услугу, дату и госномер рейса');return segments.map(v=>v.trim().slice(0,200))}
 export async function exportTripFiles(manifest:ExportManifest,settings:Settings,download:(path:string)=>Promise<Uint8Array>,transport:typeof fetch=fetch){
  const segments=archiveSegments(manifest);if(!manifest.files?.length)throw Error('Нет документов');
+ let token:{access_token:string};
+ if(settings.accessToken)token={access_token:settings.accessToken};else{
  const tokenResponse=await transport('https://oauth2.googleapis.com/token',{method:'POST',body:new URLSearchParams({client_id:settings.clientId,client_secret:settings.clientSecret,refresh_token:settings.refreshToken,grant_type:'refresh_token'}),signal:AbortSignal.timeout(15000)});
- if(!tokenResponse.ok)throw Error('Google authorization failed');const token=await tokenResponse.json();
+ if(!tokenResponse.ok)throw Error('Google authorization failed');token=await tokenResponse.json();
+ }
  async function api(path:string,init:RequestInit={}){const headers=new Headers(init.headers);headers.set('Authorization','Bearer '+token.access_token);const r=await transport('https://www.googleapis.com/'+path,{...init,headers,signal:AbortSignal.timeout(25000)});if(!r.ok)throw Error('Google Drive request failed');return r.json()}
  let parent=settings.rootFolder;
  for(const name of segments){

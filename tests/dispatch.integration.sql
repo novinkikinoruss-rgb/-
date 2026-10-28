@@ -118,7 +118,7 @@ do $$begin
  begin perform respectlogistic_replace_dispatch_driver(null,1,null,'',false);raise exception using message='TEST: anon replacement RPC allowed',errcode='P0002';exception when insufficient_privilege then null;end;
  perform set_config('request.jwt.claim.sub','',true);
  begin perform count(*) from public.respectlogistic_dispatch_requests;raise exception using message='TEST: anonymous table read accepted',errcode='P0002';exception when insufficient_privilege then null;end;
- if jsonb_array_length(public.respectlogistic_driver_dispatch(current_setting('dispatch.test_token'))->'dispatch_shifts')<>1 then raise exception 'TEST: opaque driver session failed as anon';end if;
+ if jsonb_array_length(public.respectlogistic_driver_dispatch(current_setting('dispatch.test_token'))->'dispatch_shifts')<>0 then raise exception 'TEST: cancelled assignment visible to opaque driver session';end if;
  begin perform public.respectlogistic_driver_dispatch(repeat('b',64));raise exception using message='TEST: arbitrary token accepted',errcode='P0002';exception when sqlstate '28000' then null;end;
 end$$;
 reset role;

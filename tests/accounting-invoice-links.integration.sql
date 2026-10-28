@@ -29,6 +29,16 @@ do $$declare actor uuid=auth.uid();cid uuid=gen_random_uuid();co uuid=gen_random
  perform set_config('request.jwt.claim.sub',gen_random_uuid()::text,true);
  begin perform respectlogistic_create_accounting_document(body||jsonb_build_object('id',gen_random_uuid(),'kind','registry','invoice_id',invoice),array[trip],versions);raise exception using message='TEST: foreign invoice accepted',errcode='P0002';exception when sqlstate 'P0001' then null;end;
  perform set_config('request.jwt.claim.sub',actor::text,true);
+ perform respectlogistic_manage_accounting_document(upd,(select modified_at from respectlogistic_accounting_documents where id=upd),'edit',jsonb_build_object('document_date',day,'notes','Edited draft'));
+ if (select notes from respectlogistic_accounting_documents where id=upd)<>'Edited draft' then raise exception 'TEST: draft edit lost';end if;
+ perform respectlogistic_manage_accounting_document(upd,(select modified_at from respectlogistic_accounting_documents where id=upd),'archive');
+ if (select deleted_at from respectlogistic_accounting_documents where id=upd) is null or (select status from respectlogistic_accounting_documents where id=upd)<>'draft' then raise exception 'TEST: archive changed ledger';end if;
+ perform respectlogistic_manage_accounting_document(upd,(select modified_at from respectlogistic_accounting_documents where id=upd),'restore');
+ perform respectlogistic_manage_accounting_document(upd,(select modified_at from respectlogistic_accounting_documents where id=upd),'delete');
+ if (select deleted_at from respectlogistic_accounting_documents where id=upd) is null or (select status from respectlogistic_accounting_documents where id=upd)<>'cancelled' or exists(select 1 from respectlogistic_accounting_trips where document_id=upd and active) then raise exception 'TEST: deleted document still active';end if;
+ -- Corrected drafts retain the old cancelled number and receive a fresh identity.
+ other_invoice=respectlogistic_manage_accounting_document(registry,(select modified_at from respectlogistic_accounting_documents where id=registry),'revise');
+ if other_invoice=registry or (select status from respectlogistic_accounting_documents where id=registry)<>'cancelled' or not exists(select 1 from respectlogistic_accounting_documents where id=other_invoice and invoice_id=invoice and status='draft') then raise exception 'TEST: revision lost history/parent';end if;
 end$$;
 set local role anon;
 do $$begin
