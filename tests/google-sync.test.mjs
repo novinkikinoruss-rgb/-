@@ -14,7 +14,7 @@ globalThis.fetch=async(url,init={})=>{url=String(url);requests.push({url,init});
  if(url.endsWith('/respectlogistic_google_settings')){const b=JSON.parse(init.body);if(b.p_action==='credentials')return Response.json(cfg);return Response.json({configured:true,hasClient:true})}
  if(url==='https://oauth2.googleapis.com/token')return Response.json({access_token:'access',refresh_token:'new-refresh'});
  if(url.endsWith('/crm_read_trip_workspace'))return Response.json({trips:[{id:'trip',trip_number:'1',trip_date:'2026-10-28',customer_id:'c',site_id:null,vehicle_id:null,service_name:'Work',volume:2,unit:'т',unit_price:122,status:'sent'}],customers:[{id:'c',name:'=UNTRUSTED()'}],sites:[],vehicles:[],drivers:[]});
- if(url.endsWith('/respectlogistic_read_accounting'))return Response.json({documents:[{id:'advance',kind:'advance',number:'АВ-1',customer_id:'c',site_id:null,document_date:'2026-10-28',modified_at:'v1',status:'draft',total:122,vat:22,paid_amount:0,notes:'',snapshot:{seller:{name:'Seller'},customer:{name:'Customer'},items:[],vat_rate:22}}],links:[]});if(url.endsWith('/respectlogistic_driver_extras'))return Response.json({shift_files:[]});if(url.includes('/rl_crm_trip_files?'))return Response.json([]);
+ if(url.endsWith('/respectlogistic_read_accounting'))return Response.json({documents:[{id:'advance',kind:'advance',number:'АВ-1',customer_id:'c',site_id:null,document_date:'2026-10-28',modified_at:'v1',status:'draft',total:122,vat:22,paid_amount:0,notes:'',snapshot:{seller:{name:'Seller'},customer:{name:'Customer'},items:[],vat_rate:22}}],links:[]});if(url.endsWith('/respectlogistic_driver_extras'))return Response.json({shift_files:[]});if(url.includes('/rl_crm_trip_files?'))return Response.json([]);if(url.includes('/rl_crm_trips?'))return Response.json([]);
  if(url.startsWith('https://www.googleapis.com/drive/v3/files?'))return Response.json({files:new URL(url).searchParams.get('q')?.includes('mimeType')?[{id:'folder'}]:[]});
  if(url.startsWith('https://www.googleapis.com/upload/drive/v3/files?')){assert.ok(init.body instanceof Blob);return Response.json({id:'uploaded-advance'})}
  if(url==='https://sheets.googleapis.com/v4/spreadsheets/sheet?fields=sheets(properties)')return Response.json({sheets:[]});
@@ -32,3 +32,17 @@ console.log('PASS: authenticated connect/callback, state rejection, token save, 
 const internal=await GET(new Request('http://0.0.0.0:10000/api/google-sync/callback?state=bad&code=bad'));assert.equal(new URL(internal.headers.get('location')).origin,'https://respectlogistic.onrender.com','Render internal origin must never enter OAuth redirects');
 const internalConnect=await POST(new Request('http://0.0.0.0:10000/api/google-sync',{method:'POST',headers:{Authorization:'Bearer owner-fixture','Content-Type':'application/json'},body:JSON.stringify({action:'connect'})}));assert.equal(new URL((await internalConnect.json()).url).searchParams.get('redirect_uri'),'https://respectlogistic.onrender.com/api/google-sync/callback');
 console.log('PASS: Render internal host is excluded from consent, token exchange and callback redirects.');
+
+// A disabled Sheets API must report the precise action while Drive continues independently.
+const priorFetch=globalThis.fetch;let driveTouched=false;
+globalThis.fetch=async(url,init)=>{if(String(url).startsWith('https://sheets.googleapis.com/'))return Response.json({error:{message:'API disabled',details:[{reason:'SERVICE_DISABLED'}]}},{status:403});if(String(url).startsWith('https://www.googleapis.com/'))driveTouched=true;return priorFetch(url,init)};
+const disabled=await POST(req('sync'));assert.equal(disabled.status,400);assert.match((await disabled.json()).message,/Google Sheets API/);assert.equal(driveTouched,true);assert.match((await POST(req('sync'))).status.toString(),/400/);globalThis.fetch=priorFetch;
+console.log('PASS: Sheets API failure is actionable without blocking valid Drive exports.');
+// A retained accounting history entry for a deleted trip must never reach uploads or the mirror.
+let mirrored='';globalThis.fetch=async(url,init={})=>{
+ if(String(url).endsWith('/respectlogistic_read_accounting')){const r=await priorFetch(url,init),a=await r.json();a.documents.push({...a.documents[0],id:'orphan26',kind:'invoice',number:'EXCLUDED-26',snapshot:{...a.documents[0].snapshot,items:[{trip_id:'removed-trip'}]}});a.links.push({document_id:'orphan26',trip_id:'removed-trip',active:true});return Response.json(a)}
+ if(String(url).endsWith('/sheet:batchUpdate'))mirrored=init.body;
+ return priorFetch(url,init);
+};
+const orphanSync=await POST(req('sync'));assert.equal(orphanSync.status,200);assert.equal((await orphanSync.json()).documents,1);assert.ok(!mirrored.includes('EXCLUDED-26'));globalThis.fetch=priorFetch;
+console.log('PASS: orphan accounting history is excluded from real sync payloads.');

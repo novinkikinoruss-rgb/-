@@ -1,5 +1,5 @@
-import {ownerRpc} from '../../../lib/google-sync-server';
-import {exportTripFiles,type ExportManifest} from '../../../lib/trip-drive';
+import {ownerRpc} from '../../../lib/google-sync-server.ts';
+import {exportTripFiles,type ExportManifest} from '../../../lib/trip-drive.ts';
 export const runtime='nodejs';
 export const dynamic='force-dynamic';
 export async function GET(request:Request){try{const authorization=request.headers.get('authorization')||'';if(authorization.startsWith('Bearer ')){const status=await ownerRpc(authorization,'respectlogistic_google_settings');return Response.json({configured:status.configured},{headers:{'Cache-Control':'no-store'}})}}catch{}return Response.json({configured:Boolean(process.env.GOOGLE_DRIVE_CLIENT_ID&&process.env.GOOGLE_DRIVE_CLIENT_SECRET&&process.env.GOOGLE_DRIVE_REFRESH_TOKEN&&process.env.GOOGLE_DRIVE_TRIPS_ROOT_FOLDER_ID)},{headers:{'Cache-Control':'no-store'}})}
@@ -16,6 +16,7 @@ export async function POST(request:Request){
   let settings={clientId:process.env.GOOGLE_DRIVE_CLIENT_ID,clientSecret:process.env.GOOGLE_DRIVE_CLIENT_SECRET,refreshToken:process.env.GOOGLE_DRIVE_REFRESH_TOKEN,rootFolder:process.env.GOOGLE_DRIVE_TRIPS_ROOT_FOLDER_ID};
   try{const cfg=await ownerRpc(authorization,'respectlogistic_google_settings',{p_action:'credentials'});if(cfg.refreshToken)settings={clientId:cfg.clientId,clientSecret:cfg.clientSecret,refreshToken:cfg.refreshToken,rootFolder:cfg.rootFolder}}catch{}
   if(!settings.clientId||!settings.clientSecret||!settings.refreshToken||!settings.rootFolder){await rpc('respectlogistic_finish_drive_export',{p_trip_id:tripId,p_version:manifest.version,p_state:'awaiting_connection',p_error:'Подключите Google Диск к CRM для автоматической отправки документов'});return Response.json({state:'awaiting_connection'})}
+  const tripResponse=await fetch(base+'/rest/v1/rl_crm_trips?'+new URLSearchParams({id:'eq.'+tripId,select:'trip_number',deleted_at:'is.null'}),{headers:{apikey:key,Authorization:authorization},signal:AbortSignal.timeout(15000),cache:'no-store'});if(!tripResponse.ok)throw Error('Не удалось проверить номер рейса');const trips=await tripResponse.json();if(trips.length!==1||!trips[0].trip_number)throw Error('Рейс недоступен');manifest.trip_number=trips[0].trip_number;
   const folder=await exportTripFiles(manifest,{clientId:settings.clientId,clientSecret:settings.clientSecret,refreshToken:settings.refreshToken,rootFolder:settings.rootFolder},async(path)=>{
    if(path.startsWith('shift:')){const file=await rpc('respectlogistic_driver_file',{p_id:path.slice(6)});return new Uint8Array(Buffer.from(file.base64,'base64'));}
    const r=await fetch(base+'/storage/v1/object/authenticated/respectlogistic-trip-documents/'+path,{headers:{apikey:key!,Authorization:authorization!},signal:AbortSignal.timeout(20000),cache:'no-store'});
