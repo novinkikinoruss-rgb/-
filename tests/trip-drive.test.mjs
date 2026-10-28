@@ -43,7 +43,7 @@ test('cleanup trashes only tagged deleted entities beneath the configured root a
  const fake=async(url,init={})=>{
   const u=new URL(url);
   if(init.method==='PATCH'){assert.deepEqual(JSON.parse(init.body),{trashed:true});removed.push(u.pathname.split('/').pop());return Response.json({id:removed.at(-1),trashed:true})}
-  if(u.pathname.endsWith('/files')){assert.ok(u.searchParams.get('q').includes("value='deleted'"));return Response.json(u.searchParams.get('pageToken')?{files:[{id:'owned-two',parents:['inside'],appProperties:{respectlogistic_trip:'deleted',respectlogistic_file:'file-two'}}]}:{files:[{id:'owned',parents:['inside'],appProperties:{respectlogistic_trip:'deleted',respectlogistic_file:'file'}},{id:'outside',parents:['outside'],appProperties:{respectlogistic_trip:'deleted',respectlogistic_file:'file'}},{id:'manual',parents:['inside'],appProperties:{respectlogistic_trip:'deleted'}},{id:'live',parents:['inside'],appProperties:{respectlogistic_trip:'live',respectlogistic_file:'live-file'}}],nextPageToken:'second'})}
+  if(u.pathname.endsWith('/files')){if(u.searchParams.get('q').includes('respectlogistic_trip_folder'))return Response.json({files:[]});assert.ok(u.searchParams.get('q').includes("value='deleted'"));return Response.json(u.searchParams.get('pageToken')?{files:[{id:'owned-two',parents:['inside'],appProperties:{respectlogistic_trip:'deleted',respectlogistic_file:'file-two'}}]}:{files:[{id:'owned',parents:['inside'],appProperties:{respectlogistic_trip:'deleted',respectlogistic_file:'file'}},{id:'outside',parents:['outside'],appProperties:{respectlogistic_trip:'deleted',respectlogistic_file:'file'}},{id:'manual',parents:['inside'],appProperties:{respectlogistic_trip:'deleted'}},{id:'live',parents:['inside'],appProperties:{respectlogistic_trip:'live',respectlogistic_file:'live-file'}}],nextPageToken:'second'})}
   return Response.json({parents:u.pathname.endsWith('/inside')?['root']:[]});
  };
  assert.equal(await removeDeletedDriveExports('root','token',['deleted'],fake),2);assert.deepEqual(removed,['owned','owned-two']);
@@ -67,4 +67,31 @@ test('a same-name folder containing another trip is never adopted or modified',a
   return Response.json({files:[{id:'stored'}]});
  };
  assert.equal(await exportTripFiles({...manifest,files:[manifest.files[0]]},{accessToken:'token',clientId:'',clientSecret:'',refreshToken:'',rootFolder:'root'},async()=>{throw Error('Must reuse file')},fake),'https://drive.google.com/drive/folders/separate');assert.equal(created,1);
+});
+test('cleanup removes only empty tagged trip folders, including leftovers from earlier syncs',async()=>{
+ const trashed=[],checked=[],events=[];
+ const folders=[{id:'empty',parents:['inside'],appProperties:{respectlogistic_trip_folder:'deleted'}},{id:'nonempty',parents:['inside'],appProperties:{respectlogistic_trip_folder:'deleted'}},{id:'manual',parents:['inside'],appProperties:{}},{id:'outside',parents:['elsewhere'],appProperties:{respectlogistic_trip_folder:'deleted'}},{id:'live',parents:['inside'],appProperties:{respectlogistic_trip_folder:'live'}},{id:'root',parents:['inside'],appProperties:{respectlogistic_trip_folder:'deleted'}}];
+ const fake=async(url,init={})=>{const u=new URL(url),q=u.searchParams.get('q')||'';
+  if(init.method==='PATCH'){assert.deepEqual(JSON.parse(init.body),{trashed:true});trashed.push(u.pathname.split('/').pop());events.push('trash:'+trashed.at(-1));return Response.json({id:trashed.at(-1)})}
+  if(u.pathname.endsWith('/files')){
+   if(q.includes('respectlogistic_trip_folder'))return Response.json(u.searchParams.get('pageToken')?{files:[{id:'older-empty',parents:['inside'],appProperties:{respectlogistic_trip_folder:'deleted'}},{id:'uncertain',parents:['inside'],appProperties:{respectlogistic_trip_folder:'deleted'}}]}:{files:folders,nextPageToken:'second'});
+   if(q.includes("mimeType!='"))return Response.json({files:[{id:'photo',parents:['empty'],appProperties:{respectlogistic_trip:'deleted',respectlogistic_file:'photo'}}]});
+   const id=q.match(/'([^']+)' in parents/)[1];checked.push(id);events.push('check:'+id);
+   if(id==='nonempty')return Response.json({files:[{id:'manual-file'}]});
+   if(id==='uncertain')return Response.json({files:[],incompleteSearch:true});
+   return Response.json({files:[]});
+  }
+  return Response.json({parents:u.pathname.endsWith('/empty')?['inside']:u.pathname.endsWith('/inside')?['root']:[]});
+ };
+ assert.equal(await removeDeletedDriveExports('root','token',['deleted'],fake),1);
+ assert.deepEqual(trashed,['photo','empty','older-empty']);assert.deepEqual(checked,['empty','nonempty','older-empty','uncertain']);assert.ok(events.indexOf('trash:photo')<events.indexOf('check:empty'));
+});
+test('a failed folder-content check never trashes the folder',async()=>{
+ let patched=false;
+ const fake=async(url,init={})=>{const u=new URL(url),q=u.searchParams.get('q')||'';if(init.method==='PATCH'){patched=true;throw Error('Must not trash')}
+  if(q.includes('respectlogistic_trip_folder'))return Response.json({files:[{id:'leaf',parents:['root'],appProperties:{respectlogistic_trip_folder:'deleted'}}]});
+  if(q.includes("mimeType!='"))return Response.json({files:[]});
+  return new Response('unavailable',{status:503});
+ };
+ await assert.rejects(()=>removeDeletedDriveExports('root','token',['deleted'],fake),/Не удалось/);assert.equal(patched,false);
 });

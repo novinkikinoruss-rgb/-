@@ -57,5 +57,21 @@ export async function removeDeletedDriveExports(rootFolder:string,accessToken:st
   const condition=ids.slice(i,i+20).map(id=>"appProperties has { key='respectlogistic_trip' and value='"+quote(id)+"' }").join(' or ');
   const query=new URLSearchParams({q:"trashed=false and mimeType!='application/vnd.google-apps.folder' and ("+condition+")",fields:'files(id,parents,appProperties),nextPageToken',pageSize:'100',supportsAllDrives:'true',includeItemsFromAllDrives:'true',...(pageToken?{pageToken}:{})});
   const page=await api('files?'+query);for(const f of page.files||[]){if(!f.appProperties?.respectlogistic_file||!excluded.has(f.appProperties.respectlogistic_trip)||!await inRoot(f.parents||[]))continue;await api('files/'+encodeURIComponent(f.id)+'?supportsAllDrives=true&fields=id,trashed',{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({trashed:true})});removed++}pageToken=page.nextPageToken||'';
- }while(pageToken)}return removed;
+ }while(pageToken)}
+ // A trip's tagged leaf folder can outlive its files (including an earlier cleanup).
+ // Never prune shared hierarchy folders, untagged folders or nonempty neighbours.
+ const folders:{id:string;parents?:string[];appProperties?:Record<string,string>}[]=[];
+ for(let i=0;i<ids.length;i+=20){let pageToken='';do{
+  const condition=ids.slice(i,i+20).map(id=>"appProperties has { key='respectlogistic_trip_folder' and value='"+quote(id)+"' }").join(' or ');
+  const page=await api('files?'+new URLSearchParams({q:"trashed=false and mimeType='application/vnd.google-apps.folder' and ("+condition+")",fields:'files(id,parents,appProperties),nextPageToken,incompleteSearch',pageSize:'100',supportsAllDrives:'true',includeItemsFromAllDrives:'true',...(pageToken?{pageToken}:{})}));
+  if(page.incompleteSearch)throw Error('Не удалось полностью проверить папки удалённых рейсов');
+  folders.push(...(page.files||[]));pageToken=page.nextPageToken||'';
+ }while(pageToken)}
+ for(const folder of folders){
+  if(folder.id===rootFolder||!excluded.has(folder.appProperties?.respectlogistic_trip_folder||'')||!await inRoot(folder.parents||[]))continue;
+  const children=await api('files?'+new URLSearchParams({q:"trashed=false and '"+quote(folder.id)+"' in parents",fields:'files(id),nextPageToken,incompleteSearch',pageSize:'1',supportsAllDrives:'true',includeItemsFromAllDrives:'true'}));
+  if(!Array.isArray(children.files)||children.files.length||children.nextPageToken||children.incompleteSearch)continue;
+  await api('files/'+encodeURIComponent(folder.id)+'?supportsAllDrives=true&fields=id,trashed',{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({trashed:true})});
+ }
+ return removed;
 }
