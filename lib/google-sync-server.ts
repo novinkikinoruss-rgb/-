@@ -1,4 +1,5 @@
 import {createHash,randomBytes} from 'node:crypto';
+export const CRM_ORIGIN='https://respectlogistic.onrender.com';
 export const GOOGLE_COOKIE='__Host-rl-google-link';
 export const CALLBACK_PATH='/api/google-sync/callback';
 export function googleCookie(value:string,age=600){return `${GOOGLE_COOKIE}=${value}; Path=/; Max-Age=${age}; HttpOnly; Secure; SameSite=Lax`}

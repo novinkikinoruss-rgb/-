@@ -1,5 +1,5 @@
 import {createHash} from 'node:crypto';
-import {googleCookie,googleState,googleAuthorization,ownerRpc,googleAccessToken} from '../../../lib/google-sync-server.ts';
+import {CRM_ORIGIN,googleCookie,googleState,googleAuthorization,ownerRpc,googleAccessToken} from '../../../lib/google-sync-server.ts';
 import {registryTabs} from '../../../lib/crm-register.ts';import {accountingHtml} from '../../../lib/accounting.ts';import {exportTripFiles} from '../../../lib/trip-drive.ts';
 export const dynamic='force-dynamic';export const runtime='nodejs';
 export async function POST(request:Request){const authorization=request.headers.get('authorization')||'';if(!authorization.startsWith('Bearer '))return Response.json({message:'Войдите как администратор'},{status:401});
@@ -7,7 +7,7 @@ export async function POST(request:Request){const authorization=request.headers.
  if(body.action==='connect'){
   if(body.clientId)await ownerRpc(authorization,'respectlogistic_google_settings',{p_action:'save',p_record:{clientId:body.clientId,clientSecret:body.clientSecret||''}});
   const cfg=await ownerRpc(authorization,'respectlogistic_google_settings',{p_action:'credentials'});if(!cfg.clientId||!cfg.clientSecret)throw Error('Сначала укажите Client ID и Client Secret OAuth-клиента Google');const session=googleState(authorization);
-  return Response.json({url:googleAuthorization(cfg.clientId,new URL(request.url).origin,session)},{headers:{'Cache-Control':'no-store','Set-Cookie':googleCookie(Buffer.from(JSON.stringify(session)).toString('base64url'))}});
+  return Response.json({url:googleAuthorization(cfg.clientId,CRM_ORIGIN,session)},{headers:{'Cache-Control':'no-store','Set-Cookie':googleCookie(Buffer.from(JSON.stringify(session)).toString('base64url'))}});
  }
  if(body.action!=='sync')return Response.json({message:'Действие недоступно'},{status:400});
  const cfg=await ownerRpc(authorization,'respectlogistic_google_settings',{p_action:'credentials'});const accessToken=await googleAccessToken(cfg);
