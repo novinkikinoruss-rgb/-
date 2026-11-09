@@ -2,6 +2,9 @@
 import {useEffect,useRef,useState,type FormEvent} from 'react';
 import {db} from '../lib/supabase';
 
+// Capture before Auth initialization can consume and remove the fragment.
+const recoveryReturn=typeof window!=='undefined'&&new URLSearchParams(window.location.hash.slice(1)).get('type')==='recovery';
+
 const expired='Ссылка истекла или уже использована. Запросите новое письмо.';
 function recoveryHash(value:string):string{
   let url:URL;
@@ -22,13 +25,21 @@ export function PasswordRecovery(){
   const started=useRef(false);
   useEffect(()=>{
     if(!db)return;
+    let active=true;
     const {data:{subscription}}=db.auth.onAuthStateChange(event=>{if(event==='PASSWORD_RECOVERY'){setVerified(true);setError('');window.history.replaceState(null,'','/reset-password');}});
+    // A fast Auth response may emit PASSWORD_RECOVERY before React subscribes.
+    // getSession waits for SDK initialization and validates that a session exists.
+    if(recoveryReturn)void db.auth.getSession().then(({data,error})=>{
+      if(!active)return;
+      window.history.replaceState(null,'','/reset-password');
+      if(!error&&data.session){setVerified(true);setError('');}else setError(expired);
+    });
     if(!started.current){
       started.current=true;
       const hash=new URLSearchParams(window.location.hash.slice(1));
       if(hash.has('error')){setError(expired);window.history.replaceState(null,'','/reset-password');}
     }
-    return()=>subscription.unsubscribe();
+    return()=>{active=false;subscription.unsubscribe();};
   },[]);
   async function send(event:FormEvent){
     event.preventDefault();if(!db||busy)return;setBusy(true);setError('');setMessage('');
