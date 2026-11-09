@@ -18,7 +18,7 @@ test('Overview preserves all filters, customer documents/payments, grouped remin
   if(path.endsWith('/respectlogistic_read_company_balance'))result={balance};if(path.endsWith('/respectlogistic_save_company_balance')){const p=route.request().postDataJSON();expect(p.p_amount).toBe(60000.5);expect(p.p_expected).toBeNull();balance={amount_kopecks:6000050,balance_date:p.p_date,modified_at:'2026-10-25T13:00:00Z'};result=balance;}
   if(path.endsWith('/respectlogistic_read_profit')){if(failProfit){await route.fulfill({status:500,json:{message:'test unavailable'}});return}result=profit}
   if(path.endsWith('/respectlogistic_read_accounting'))result=account;if(path.endsWith('/respectlogistic_read_service'))result=service;
-  if(path.includes('/rpc/')&&!/read_company_balance|save_company_balance|read_workspace|read_profit|read_accounting|read_service|crm_read_trip_workspace|driver_extras|read_trip_progress/.test(path))unexpected.push(path);
+  if(path.includes('/rpc/')&&!/read_ui_settings|save_ui_setting|read_company_balance|save_company_balance|read_workspace|read_profit|read_accounting|read_service|crm_read_trip_workspace|driver_extras|read_trip_progress/.test(path))unexpected.push(path);
   await route.fulfill({json:result});
  });
  await page.goto('/');await page.getByLabel('Email',{exact:true}).fill('test@example.invalid');await page.getByLabel('Пароль',{exact:true}).fill('test-password');await page.getByRole('button',{name:'Войти',exact:true}).click();

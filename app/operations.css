@@ -1,0 +1,182 @@
+/* Operational workspace: wide data tables and a calm, high-contrast shell. */
+.crm-workspace{--ink:#233248;--muted:#6e7b8e;--line:#e0e5ec;--lime:#173652;--lime-deep:#284e72;--surface:#fff;--radius:9px;--shadow:0 2px 8px #142b4610;--cell-y:9px;--cell-x:12px;display:block!important;padding:0!important;min-height:100dvh;background:#f3f5f8;color:var(--ink);font-size:13px}
+.crm-workspace[data-density=comfortable]{--cell-y:16px;--cell-x:15px}
+.crm-workspace .crm-header{height:66px;position:sticky;top:0;z-index:100;display:flex;align-items:center;justify-content:space-between;gap:20px;padding:0 26px;background:#15263d;color:#e9eff7;box-shadow:0 1px 4px #0b172433}
+.crm-workspace .crm-brand-group{display:flex;align-items:center;gap:12px;flex-shrink:0}
+.crm-workspace .brand{padding:0;font-size:21px;letter-spacing:-.3px;gap:11px}
+.crm-workspace .brand-icon{display:grid;place-items:center;width:38px;height:38px;border-radius:8px;background:#d55149;color:#fff}
+.crm-workspace .brand-sub{font-size:9px;letter-spacing:1.4px;margin-top:3px;color:#afbdce}
+.crm-workspace .crm-header .topbar-right{gap:13px;min-width:0}
+.crm-workspace .crm-header .user-label{color:#e9eff7;max-width:230px;font-size:12px}
+.crm-workspace .crm-header .avatar{width:33px;height:33px;background:#e4ebf4;color:#283d58}
+.crm-workspace .crm-header .divider{background:#ffffff28}
+.crm-workspace .crm-header .icon-button{border-color:#ffffff24;background:#ffffff0e;color:#dfe8f5;border-radius:7px;width:34px;height:34px}
+.crm-workspace .crm-header .icon-button:hover{background:#ffffff22}
+.crm-workspace .crm-header .system-trigger{background:#ffffff0c;border-color:#ffffff26;color:#dfe8f5}
+.crm-workspace .crm-header .system-popover,.crm-workspace .crm-header .notification-panel{color:var(--ink)}
+.crm-workspace .sidebar{display:flex!important;position:sticky!important;top:66px;width:100%!important;height:auto!important;z-index:90;padding:0 22px!important;border:0;border-bottom:1px solid #dce2ea;border-radius:0;background:#fff;box-shadow:none;backdrop-filter:none;color:var(--ink)}
+.crm-workspace .sidebar nav{display:flex;flex:1;min-width:0;align-items:stretch;gap:2px;overflow-x:auto;scrollbar-width:thin;scrollbar-color:#c1ccd9 transparent}
+.crm-nav-tools{display:flex;align-items:center;gap:4px;flex-shrink:0;padding-left:10px;box-shadow:-7px 0 12px #fff;background:#fff}
+.crm-workspace .crm-nav-tools .icon-button{width:26px;height:28px;border:0;background:#f1f4f8;border-radius:4px;font-size:22px;color:#4e6786}
+.crm-workspace .sidebar .nav-item{display:flex;flex:0 0 auto;width:auto;min-height:48px;padding:10px 13px;margin:0;border-radius:0;border-bottom:3px solid transparent;gap:7px;font-size:12px;font-weight:500;white-space:nowrap;color:#617084;background:transparent;box-shadow:none}
+.crm-workspace .sidebar .nav-item:not(:disabled):hover{transform:none;background:#f2f5f9;color:#1a3858}
+.crm-workspace .sidebar .nav-item.active{color:#193a5c;background:#f5f8fc;border-bottom-color:#204e79;font-weight:700}
+.crm-workspace .sidebar .nav-item:disabled{opacity:.44}
+.crm-workspace .nav-count{margin-left:3px;background:#e7edf5;color:#365677;border-radius:5px;padding:2px 5px}
+.crm-workspace .main{min-width:0;width:100%;padding:0}
+.crm-workspace :is(button,input,select,textarea,[tabindex]){scroll-margin-top:140px;scroll-margin-bottom:20px}
+.crm-workspace .crm-contextbar{display:flex;align-items:center;justify-content:space-between;gap:15px;padding:13px 27px;min-height:52px;border-bottom:1px solid #e7ebf0;background:#f8f9fb}
+.crm-workspace .breadcrumb{font-size:12px;gap:9px;flex-shrink:0}
+.crm-workspace .breadcrumb strong{color:#334a66}
+.crm-view-controls{display:flex;align-items:center;justify-content:flex-end;gap:16px;flex-wrap:wrap;color:#607186;font-size:12px}
+.crm-view-controls>label{display:flex;align-items:center;gap:7px;white-space:nowrap}
+.crm-view-controls select{border:1px solid #d6dfe9;background:#fff;border-radius:6px;padding:6px 25px 6px 9px;min-height:31px;color:#314a67;font-size:12px;max-width:160px}
+.crm-workspace input[type=checkbox]{accent-color:#24527c;flex-shrink:0}
+.crm-wrap-control input{width:15px;height:15px;margin:0}
+.crm-settings-state{font-size:10px;color:#8895a5;max-width:340px}
+.crm-settings-state.error{color:#a23d35;display:flex;align-items:center;gap:6px}
+.crm-settings-state button{border:0;background:transparent;color:#214d78;text-decoration:underline;padding:3px;font-size:11px}
+.crm-workspace .content,.crm-workspace.trip-focus .trips-content{max-width:none;padding:22px 26px 12px;margin:0}
+.crm-workspace h1{font-size:25px;letter-spacing:-.55px;line-height:1.25}
+.crm-workspace h2{font-size:17px;letter-spacing:-.2px}
+.crm-workspace .eyebrow{font-size:9px;letter-spacing:1.2px;color:#8090a2}
+.crm-workspace .page-heading{margin-bottom:19px;gap:18px}
+.crm-workspace .page-heading h1{margin-top:4px}
+.crm-workspace .page-heading p{font-size:12px;margin-top:7px;line-height:1.5;color:#7d8998}
+.crm-workspace .count-badge{font-size:12px;color:#4e647f;background:#e4ebf3;border-radius:5px;padding:4px 8px}
+.crm-workspace .panel{background:#fff;border:1px solid #dfe5ed;border-radius:9px;box-shadow:0 2px 7px #16314e07;backdrop-filter:none;padding:20px}
+.crm-workspace .button{background:#193a5a;color:#fff;border:1px solid #193a5a;border-radius:6px;box-shadow:none;font-size:12px;font-weight:600;min-height:36px;padding:9px 14px;gap:7px}
+.crm-workspace .button:hover:not(:disabled){background:#254f77;border-color:#254f77;transform:none;box-shadow:0 2px 5px #173c5820}
+.crm-workspace .button.secondary{background:#fff;color:#3f5771;border-color:#d7e0ea}
+.crm-workspace .button.secondary:hover:not(:disabled){background:#edf2f8;border-color:#bdccdd}
+.crm-workspace .button.compact{font-size:11px;padding:6px 10px;min-height:30px;border-radius:5px}
+.crm-workspace .icon-button{border-radius:6px;background:#fff;border-color:#d9e2ec;color:#5d728c}
+.crm-workspace .icon-button:hover{background:#edf3f9}
+.crm-workspace .text-button{font-size:12px;color:#2f5d88}
+.crm-workspace .field{font-size:12px;color:#627186;gap:7px;line-height:1.4}
+.crm-workspace .field input,.crm-workspace .field select,.crm-workspace .field textarea{border-radius:5px;border-color:#d8e0e9;min-height:37px;padding:9px 10px;font-size:13px;background:#fff;color:#2c405a}
+.crm-workspace .field input:focus,.crm-workspace .field select:focus,.crm-workspace .field textarea:focus{border-color:#7d9fc1;outline:2px solid #b5cbe247;box-shadow:none}
+.crm-workspace .search-box{border:1px solid #dce4ed;background:#fff;border-radius:6px;box-shadow:none;padding:10px 12px}
+.crm-workspace .search-box input{font-size:13px}
+.crm-workspace .customer-tabs{border-color:#dce3ec;gap:24px}
+.crm-workspace .customer-tabs button{font-size:12px;padding:12px 0;color:#7b8a9c}
+.crm-workspace .customer-tabs button.active{color:#214d77;border-color:#214d77}
+.crm-workspace .view-switch{border-radius:6px;background:#e5eaf1}
+.crm-workspace .view-switch button{border-radius:4px;color:#667991}
+.crm-workspace .view-switch button.selected{color:#234d73}
+.crm-workspace .customer-choice,.crm-workspace .kanban-card{border-radius:6px}
+.crm-workspace .customer-choice.chosen{background:#edf3fa;border-color:#cddcec}
+.crm-workspace .customer-letter,.crm-workspace .company-avatar{background:#e8eff7;color:#3e648c;border-radius:7px}
+.crm-workspace .customer-choice strong{font-size:12px}
+.crm-workspace .customer-choice small{font-size:11px}
+.crm-workspace .customer-directory{top:130px;max-height:calc(100dvh - 160px);overflow-y:auto;scrollbar-width:thin}
+.crm-workspace .workflow-steps{background:#edf2f8;border-color:#dae4ef;border-radius:7px}
+.crm-workspace .soft-icon{border-radius:7px;background:#eaf0f7;color:#4c7296}
+.crm-workspace .metric-card{border-radius:9px;border:1px solid #dfe5ed;box-shadow:0 2px 7px #16314e07}
+.crm-workspace .metric-value{font-size:29px}
+.crm-workspace .chip{border-radius:5px;font-size:11px}
+.crm-workspace .trip-alert,.crm-workspace .fleet-alert,.crm-workspace .cp-alert{border-radius:7px;font-size:12px}
+.crm-workspace .next-action{border-radius:9px;background:#edf3f8;border-color:#d8e3ef}
+.crm-workspace .requisite-grid>div{font-size:13px;line-height:1.6}
+.crm-workspace .record{border-radius:7px;font-size:13px}
+.crm-workspace .table-scroll,.crm-workspace .trip-sheet{border:1px solid #dfe5ed;border-radius:7px;background:#fff;overflow:auto;max-height:65dvh;scrollbar-width:thin;scrollbar-color:#a6b5c8 #eff2f6;scrollbar-gutter:stable;overscroll-behavior:contain;isolation:isolate}
+.crm-workspace .table-scroll table,.crm-workspace .trip-sheet table{border-collapse:separate;border-spacing:0;width:100%;font-size:13px;font-variant-numeric:tabular-nums}
+.crm-workspace .table-scroll th,.crm-workspace .trip-sheet th{position:sticky;top:0;z-index:3;background:#f0f3f7;color:#62758e;padding:11px var(--cell-x);font-size:11px;font-weight:600;letter-spacing:.15px;vertical-align:middle;border-bottom:1px solid #d5dee9;border-right:1px solid #e1e7ef;line-height:1.45}
+.crm-workspace .table-scroll td,.crm-workspace .trip-sheet td{padding:var(--cell-y) var(--cell-x);font-size:13px;border-bottom:1px solid #e7ecf2;border-right:1px solid #edf0f5;line-height:1.5;vertical-align:top;background:#fff}
+.crm-workspace .table-scroll td small,.crm-workspace .trip-sheet td small{font-size:11px;line-height:1.5;color:#8491a3}
+.crm-workspace .table-scroll tbody tr:nth-child(even)>td{background:#fafbfd}
+.crm-workspace .trip-sheet tbody tr:nth-child(4n+3)>td{background:#fafbfd}
+.crm-workspace .table-scroll tbody tr:hover>td,.crm-workspace .trip-sheet tbody tr:hover>td{background:#f0f5fb}
+.crm-workspace .table-scroll tbody tr.selected>td,.crm-workspace .trip-sheet tbody tr.trip-selected>td{background:#e8f1fc}
+.crm-workspace .trip-sheet .trip-sticky-check{padding-left:3px;padding-right:3px;left:0;z-index:4}
+.crm-workspace .trip-sheet .trip-sticky-number{left:36px;z-index:4;box-shadow:3px 0 5px #2339520a}
+.crm-workspace .trip-sheet th.trip-sticky-check,.crm-workspace .trip-sheet th.trip-sticky-number{z-index:6;background:#f0f3f7}
+.crm-workspace .trip-sheet td strong{font-size:13px}
+.crm-workspace .trip-number-cell .trip-expand{width:25px;min-width:25px;height:28px;border-radius:5px;background:#f7f9fc}
+.crm-workspace .trip-file-count{font-size:10px!important}
+.crm-workspace .trip-status-select{font-size:11px;min-height:31px;border-radius:5px}
+.crm-workspace .trip-plate{font-size:11px;border-radius:4px}
+.crm-workspace [data-column=price],.crm-workspace [data-column=total],.crm-workspace [data-column=volume]{font-variant-numeric:tabular-nums;white-space:nowrap}
+.crm-workspace[data-wrap=true] .trip-cell-text{display:block;-webkit-line-clamp:unset;white-space:normal;overflow:visible;overflow-wrap:anywhere}
+.crm-workspace[data-wrap=false] .trip-cell-text{display:block;white-space:nowrap;text-overflow:ellipsis;overflow:hidden}
+.crm-workspace[data-wrap=false] .table-scroll td{white-space:nowrap;max-width:340px;overflow:hidden;text-overflow:ellipsis}
+.crm-workspace .trip-grid-tools{font-size:11px;color:#7a8b9e;padding:10px 0 12px;gap:14px}
+.crm-workspace .trip-grid-tools>span{line-height:1.5}
+.crm-workspace .trip-columns-control summary{font-size:12px;border-radius:5px;border-color:#d9e3ef;background:#fff;color:#355a7c}
+.crm-workspace .trip-columns-panel{border-radius:7px;border-color:#dce3ed;box-shadow:0 8px 24px #1a304628}
+.crm-workspace .trip-column-title{cursor:grab;font-size:11px}
+.crm-workspace .compact-trip-grid th [role=separator]:hover,.crm-workspace .compact-trip-grid th [role=separator]:focus-visible{background:#abc7e466;border-color:#527ca5}
+.crm-workspace .trip-pagination{background:#fff;border:1px solid #dfe5ed;border-top:0;border-radius:0 0 7px 7px;padding:11px 14px;font-size:12px;color:#677b92;gap:10px}
+.crm-workspace .trip-pagination select{border-radius:5px;padding:6px 9px;color:#324d6a}
+.crm-workspace .trip-table-toolbar{padding:12px 0;gap:13px;border:0;margin:0;flex-wrap:wrap}
+.crm-workspace .trip-toolbar-actions{gap:7px;flex-wrap:wrap}
+.crm-workspace .trip-select-all,.crm-workspace .trip-selection-count{font-size:12px;color:#637890}
+.crm-workspace .trip-sheet-footer{padding:14px 2px;font-size:12px;color:#7a8a9e;gap:24px}
+.crm-workspace .trip-sheet-footer strong{color:#35516f}
+.crm-workspace .trip-request-filter{border-radius:6px;background:#edf3fa;border-color:#dae5f1;color:#3b5f83;margin-bottom:0}
+.crm-workspace .trip-heading-actions{gap:8px}
+.crm-workspace .record-layout{display:grid;grid-template-columns:minmax(0,1fr) 250px;gap:20px;align-items:start;min-width:0}
+.crm-workspace .record-main{grid-column:1;grid-row:1;min-width:0}
+.crm-workspace .record-filter{grid-column:2;grid-row:1;position:sticky;top:130px;padding:0;overflow:hidden}
+.crm-workspace .record-filter>h2{padding:16px 17px;font-size:14px;background:#f8fafc;border-bottom:1px solid #e2e8f0;font-weight:600}
+.crm-workspace .record-filter .trip-filter{display:grid;grid-template-columns:minmax(0,1fr);padding:17px;gap:16px;margin:0;border:0;border-radius:0;background:#fff;box-shadow:none}
+.crm-workspace .record-filter .trip-filter .field{grid-column:auto;grid-row:auto}
+.crm-workspace .record-filter .request-filters{display:grid;grid-template-columns:minmax(0,1fr);padding:17px;margin:0;gap:14px;border:0;background:#fff;box-shadow:none}
+.crm-workspace .record-filter .request-filters .dispatch-actions{display:grid;grid-template-columns:1fr;gap:7px}
+.crm-workspace .trip-filter-buttons{display:grid;grid-template-columns:1fr;gap:8px}
+.crm-workspace .trip-filter-buttons .button{width:100%;justify-content:center}
+.crm-workspace .record-main .trip-sheet{max-height:calc(100dvh - 345px);min-height:280px}
+.crm-workspace .requests-table{padding:0;border-radius:7px}
+.crm-workspace .requests-table>.table-scroll{border:0;border-radius:7px 7px 0 0}
+.crm-workspace .request-filters,.crm-workspace .profit-filter,.crm-workspace .dispatch-toolbar{border-radius:8px;gap:14px;padding:17px}
+.crm-workspace .requests-table .trip-pagination{border-left:0;border-right:0;border-bottom:0;border-radius:0}
+.crm-workspace .overview-finance-stat,.crm-workspace .overview-balance-card{border-radius:9px}
+.crm-workspace .overview-filters{background:#fff;border-color:#dfe5ed}
+.crm-workspace .overview-live{border-radius:5px}
+.crm-workspace .overview-shortcut,.crm-workspace .overview-reminder-group{border-radius:8px}
+.crm-workspace .page-footer{font-size:10px;color:#9aa6b4;padding:18px 2px}
+.crm-workspace .auth-card{width:calc(100% - 36px);max-width:460px;margin:9vh auto;padding:32px;border-radius:12px}
+.crm-workspace .auth-card h1{font-size:25px}
+.crm-workspace .auth-card form{display:grid;gap:16px}
+.crm-workspace .auth-card p{line-height:1.6}
+.crm-workspace .modal{border-radius:12px;box-shadow:0 20px 70px #0f294548;border:1px solid #e2e8f1}
+.crm-workspace .modal-heading{padding:21px 25px;border-bottom:1px solid #e0e6ee;background:#f8fafc}
+.crm-workspace .modal-actions{border-color:#e2e8f0;background:#f8fafc}
+@media(min-width:1101px){.crm-workspace .mobile-toggle{display:none!important}}
+@media(max-width:1100px){
+ .crm-workspace .crm-header{padding:0 18px}.crm-workspace .mobile-toggle{display:inline-grid!important}
+ .crm-workspace .sidebar{display:none!important;position:fixed!important;top:72px!important;left:12px!important;width:280px!important;max-width:calc(100vw - 24px);height:calc(100dvh - 90px)!important;padding:10px!important;border:1px solid #d8e0eb;border-radius:10px;background:#fff;overflow-y:auto;box-shadow:0 15px 45px #14273a32;z-index:110}
+ .crm-workspace .sidebar.mobile-open{display:block!important}.crm-workspace .sidebar nav{display:flex;flex-direction:column;gap:2px;overflow:visible}
+ .crm-workspace .crm-nav-tools{display:none}
+ .crm-workspace .sidebar .nav-item{width:100%;border-bottom:0;border-left:3px solid transparent;border-radius:5px;min-height:43px;font-size:13px;padding:12px}
+ .crm-workspace .sidebar .nav-item.active{border-left-color:#285985;background:#edf3fa}
+ .crm-workspace .mobile-backdrop{display:block;position:fixed;inset:66px 0 0;z-index:105;background:#17283c44;backdrop-filter:blur(2px)}
+ .crm-workspace .crm-contextbar{padding:12px 18px;align-items:flex-start}.crm-settings-state{flex-basis:100%;text-align:right}
+ .crm-workspace .content,.crm-workspace.trip-focus .trips-content{padding:20px 18px 10px}.crm-workspace .record-layout{grid-template-columns:minmax(0,1fr) 225px;gap:15px}
+}
+@media(max-width:850px){
+ .crm-workspace .record-layout{display:flex;flex-direction:column;gap:15px}.crm-workspace .record-main,.crm-workspace .record-filter{width:100%}.crm-workspace .record-filter{position:static}
+ .crm-workspace .record-filter>h2{padding:12px 15px}.crm-workspace .record-filter .trip-filter{grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;padding:15px}
+ .crm-workspace .record-filter .request-filters{grid-template-columns:repeat(2,minmax(0,1fr));padding:15px;gap:12px}
+ .crm-workspace .record-filter .trip-filter-buttons{align-self:end;grid-template-columns:1fr 1fr}.crm-workspace .record-main .trip-sheet{max-height:64dvh;min-height:280px}
+ .crm-workspace .customer-directory{position:static;max-height:350px}.crm-workspace .customer-workspace{grid-template-columns:1fr}
+ .crm-workspace .crm-contextbar{align-items:center;flex-wrap:wrap}.crm-view-controls{justify-content:flex-start}.crm-settings-state{text-align:left;flex-basis:auto}
+}
+@media(max-width:600px){
+ .crm-workspace :is(button,input,select,textarea,[tabindex]){scroll-margin-top:80px}
+ .crm-workspace .crm-header{height:62px;padding:0 12px;gap:8px}.crm-workspace .crm-brand-group{gap:8px}.crm-workspace .brand{font-size:17px;gap:7px}.crm-workspace .brand-icon{width:30px;height:32px}.crm-workspace .brand-sub{font-size:7px;letter-spacing:.6px}
+ .crm-workspace .crm-header .topbar-right{gap:6px}.crm-workspace .crm-header .user-label,.crm-workspace .crm-header .divider,.crm-workspace .crm-header .avatar{display:none}.crm-workspace .crm-header .system-status{display:none}
+ .crm-workspace .crm-header .icon-button{width:31px;height:32px}.crm-workspace .crm-header .system-trigger{padding:7px 9px;font-size:9px;max-width:76px}.crm-workspace .crm-header .system-popover{right:-35px;width:280px}
+ .crm-workspace .mobile-backdrop{top:62px}.crm-workspace .crm-contextbar{padding:11px 12px;min-height:0;gap:9px}.crm-workspace .breadcrumb{display:none}
+ .crm-view-controls{gap:10px;font-size:11px;justify-content:flex-start;width:100%}.crm-view-controls>svg{display:none}.crm-view-controls select{font-size:11px;max-width:128px;min-height:31px}.crm-settings-state{flex-basis:100%;font-size:10px;min-height:12px}
+ .crm-workspace .content,.crm-workspace.trip-focus .trips-content{padding:17px 12px 8px}.crm-workspace h1{font-size:23px}.crm-workspace .page-heading{gap:12px;flex-wrap:wrap;align-items:flex-start}.crm-workspace .page-heading p{font-size:11px;max-width:none}.crm-workspace .page-heading>.button{margin:0}
+ .crm-workspace .trip-heading-actions{width:100%;gap:7px}.crm-workspace .trip-heading-actions .button{font-size:11px;padding:8px 10px}.crm-workspace .trip-grid-tools>span{font-size:10px;max-width:200px}
+ .crm-workspace .trip-table-toolbar{gap:10px;align-items:center}.crm-workspace .trip-toolbar-actions{margin:0;width:100%}.crm-workspace .trip-toolbar-actions .button{font-size:11px;padding:8px 10px}
+ .crm-workspace .trip-sheet-footer{gap:12px;font-size:11px}.crm-workspace .trip-footer-hint{display:none}.crm-workspace .trip-pagination{gap:9px;padding:11px}.crm-workspace .trip-pagination>label{width:auto;flex-basis:100%}
+ .crm-workspace .panel{padding:16px}.crm-workspace .record-filter{padding:0}.crm-workspace .record-filter .trip-filter-buttons{grid-template-columns:1fr;gap:5px}.crm-workspace .field input,.crm-workspace .field select{font-size:12px;padding:8px}
+ .crm-workspace .table-scroll th,.crm-workspace .trip-sheet th{font-size:10px}.crm-workspace .table-scroll td,.crm-workspace .trip-sheet td{font-size:12px}.crm-workspace .trip-sheet td strong{font-size:12px}
+ .crm-workspace .metrics{gap:10px}.crm-workspace .metric-value{font-size:25px}.crm-workspace .requests-table{padding:0}.crm-workspace .request-filters{grid-template-columns:repeat(2,minmax(0,1fr));gap:11px;padding:14px}
+ .crm-workspace .customer-tabs{gap:18px}.crm-workspace .customer-tabs button{font-size:11px;white-space:nowrap}.crm-workspace .requisite-grid>div{font-size:12px}
+ .crm-workspace .modal-heading{padding:18px}.crm-workspace .auth-card{margin:5vh auto;padding:23px}.crm-workspace .auth-card h1{font-size:23px}
+}
+@media(prefers-reduced-motion:reduce){.crm-workspace *{scroll-behavior:auto!important;animation:none!important;transition:none!important}}
