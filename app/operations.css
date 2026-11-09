@@ -165,8 +165,8 @@
 @media(max-width:600px){
  .crm-workspace :is(button,input,select,textarea,[tabindex]){scroll-margin-top:80px}
  .crm-workspace .crm-header{height:62px;padding:0 12px;gap:8px}.crm-workspace .crm-brand-group{gap:8px}.crm-workspace .brand{font-size:17px;gap:7px}.crm-workspace .brand-icon{width:30px;height:32px}.crm-workspace .brand-sub{font-size:7px;letter-spacing:.6px}
- .crm-workspace .crm-header .topbar-right{gap:6px}.crm-workspace .crm-header .user-label,.crm-workspace .crm-header .divider,.crm-workspace .crm-header .avatar{display:none}.crm-workspace .crm-header .system-status{display:none}
- .crm-workspace .crm-header .icon-button{width:31px;height:32px}.crm-workspace .crm-header .system-trigger{padding:7px 9px;font-size:9px;max-width:76px}.crm-workspace .crm-header .system-popover{right:-35px;width:280px}
+ .crm-workspace .crm-header .topbar-right{gap:6px}.crm-workspace .crm-header .user-label,.crm-workspace .crm-header .divider,.crm-workspace .crm-header .avatar{display:none}.crm-workspace .crm-header .system-status{display:block}
+ .crm-workspace .crm-header .icon-button{width:31px;height:32px}.crm-workspace .crm-header .system-trigger{padding:4px;width:31px;min-width:31px;height:32px;justify-content:center}.crm-workspace .crm-header .system-trigger>span{display:none}.crm-workspace .crm-header .system-popover{right:-35px;width:280px}
  .crm-workspace .mobile-backdrop{top:62px}.crm-workspace .crm-contextbar{padding:11px 12px;min-height:0;gap:9px}.crm-workspace .breadcrumb{display:none}
  .crm-view-controls{gap:10px;font-size:11px;justify-content:flex-start;width:100%}.crm-view-controls>svg{display:none}.crm-view-controls select{font-size:11px;max-width:128px;min-height:31px}.crm-settings-state{flex-basis:100%;font-size:10px;min-height:12px}
  .crm-workspace .content,.crm-workspace.trip-focus .trips-content{padding:17px 12px 8px}.crm-workspace h1{font-size:23px}.crm-workspace .page-heading{gap:12px;flex-wrap:wrap;align-items:flex-start}.crm-workspace .page-heading p{font-size:11px;max-width:none}.crm-workspace .page-heading>.button{margin:0}
