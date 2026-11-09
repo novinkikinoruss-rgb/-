@@ -29,7 +29,7 @@ async function install(page,store,id=first){
 }
 const state=()=>({values:{},calls:[],failSave:false,failRead:false});
 async function customers(page){const menu=page.getByRole('button',{name:'Открыть меню',exact:true});if(await menu.isVisible())await menu.click();await page.locator('.sidebar .nav-item').filter({hasText:'Заказчики'}).click();await expect(page.getByRole('heading',{name:/^Заказчики/,level:1})).toBeVisible();}
-test('300 рейсов: боковой фильтр, читаемые строки, пагинация, закреплённые номера и заголовки',async({page},info)=>{
+test('300 рейсов: верхний фильтр, читаемые строки, пагинация, закреплённые номера и заголовки',async({page},info)=>{
  const store=state();await install(page,store);await expect(page.getByLabel('Плотность строк')).toBeEnabled();
  if(!info.project.use.isMobile){await page.getByRole('button',{name:'Прокрутить меню вправо'}).click();await expect.poll(()=>page.locator('.sidebar nav').evaluate(el=>el.scrollLeft)).toBeGreaterThan(0);await page.getByRole('button',{name:'Прокрутить меню влево'}).click();await expect.poll(()=>page.locator('.sidebar nav').evaluate(el=>el.scrollLeft)).toBe(0);}
  await page.getByLabel('Рейсов на странице').selectOption('100');await expect(page.locator('.compact-trip-grid tbody>tr:not([hidden])')).toHaveCount(100);
@@ -38,7 +38,7 @@ test('300 рейсов: боковой фильтр, читаемые строк
  await page.getByLabel('Плотность строк').selectOption('comfortable');await expect.poll(async()=>(await row.boundingBox()).height).toBeGreaterThan(compact+8);
  await page.getByLabel('Плотность строк').selectOption('compact');
  const filter=await page.locator('.record-filter').boundingBox(),main=await page.locator('.record-main').boundingBox();
- if(info.project.use.isMobile)expect(filter.y+filter.height).toBeLessThanOrEqual(main.y+1);else expect(filter.x).toBeGreaterThan(main.x+main.width);
+ expect(filter.y+filter.height).toBeLessThanOrEqual(main.y+1);expect(Math.abs(filter.x-main.x)).toBeLessThan(2);expect(Math.abs(filter.width-main.width)).toBeLessThan(2);
  const sheet=page.locator('.trip-sheet');await sheet.scrollIntoViewIfNeeded();const number=page.locator('thead .trip-sticky-number');const before=await number.boundingBox();
  await sheet.evaluate(el=>{el.scrollLeft=500;el.scrollTop=500;});await expect.poll(()=>sheet.evaluate(el=>el.scrollTop)).toBeGreaterThan(0);
  const after=await number.boundingBox();expect(Math.abs(before.x-after.x)).toBeLessThan(2);expect(Math.abs(before.y-after.y)).toBeLessThan(2);
