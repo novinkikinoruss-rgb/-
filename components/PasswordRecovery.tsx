@@ -40,7 +40,12 @@ export function PasswordRecovery(){
       if(error)throw error;
       setRequestedEmail(destination);setCode('');setNow(Date.now());setNextSendAt(Date.now()+60000);
       setMessage('Если адрес зарегистрирован, код отправлен. Проверьте «Входящие» и «Спам».');
-    }catch{setError('Не удалось отправить код. Подождите немного и повторите попытку.');}finally{setBusy(false);}
+    }catch(error){
+      const detail=error as {status?:number;code?:string;message?:string};
+      if(detail.code==='over_email_send_rate_limit'||/email rate limit exceeded/i.test(detail.message||''))setError('Достигнут часовой лимит отправки писем. Попробуйте позже.');
+      else if(detail.status===429)setError('Слишком много запросов на отправку кода. Подождите немного и повторите.');
+      else setError('Не удалось отправить код. Проверьте соединение и повторите попытку.');
+    }finally{setBusy(false);}
   }
   async function verify(event:FormEvent){
     event.preventDefault();if(!db||busy||!requestedEmail)return;setError('');

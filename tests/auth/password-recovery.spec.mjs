@@ -7,7 +7,7 @@ async function setup(page,{expired=false,sendFailed=false}={}){
  await page.route('https://*.supabase.co/**',route=>route.abort());
  await page.route('**/supabase/**',async route=>{
   const path=new URL(route.request().url()).pathname,body=route.request().postDataJSON();calls.push({path,method:route.request().method(),body});
-  if(path.endsWith('/recover'))return route.fulfill({status:sendFailed?429:200,json:sendFailed?{code:'over_email_send_rate_limit',message:'Rate limit exceeded'}:{}});
+  if(path.endsWith('/recover'))return route.fulfill({status:sendFailed?429:200,json:sendFailed?{code:'over_email_send_rate_limit',message:'Email rate limit exceeded'}:{}});
   if(path.endsWith('/verify')){const invalid=expired||body.token!=='123456';return route.fulfill({status:invalid?403:200,json:invalid?{code:'otp_expired',message:'Token has expired or is invalid'}:{access_token:token(),refresh_token:'test-refresh-token',expires_in:3600,token_type:'bearer',user}});}
   if(path.endsWith('/user'))return route.fulfill({json:user});
   if(path.endsWith('/logout'))return route.fulfill({status:204});
@@ -47,7 +47,7 @@ test('Истёкший код не открывает смену пароля; �
 });
 test('Отказ отправки письма не выдаётся за отправленный код',async({page})=>{
  await setup(page,{sendFailed:true});await page.getByLabel('Email',{exact:true}).fill(user.email);await page.getByRole('button',{name:'Получить код',exact:true}).click();
- await expect(page.locator('main').getByRole('alert')).toContainText('Не удалось отправить код');await expect(page.getByLabel('Код из письма')).toHaveCount(0);
+ await expect(page.locator('main').getByRole('alert')).toContainText('часовой лимит отправки писем');await expect(page.getByLabel('Код из письма')).toHaveCount(0);
 });
 test('Старый прямой возврат из письма поддерживается; токены удаляются из адресной строки',async({page})=>{
  await setup(page);await page.goto('about:blank');
