@@ -5,24 +5,15 @@ import {db} from '../lib/supabase';
 // Capture before Auth initialization can consume and remove the fragment.
 const recoveryReturn=typeof window!=='undefined'&&new URLSearchParams(window.location.hash.slice(1)).get('type')==='recovery';
 
-const expired='Ссылка истекла или уже использована. Запросите новое письмо.';
-function recoveryHash(value:string):string{
-  let url:URL;
-  try{url=new URL(value.trim());}catch{throw new Error('Скопируйте ссылку восстановления из письма целиком.');}
-  // Gmail may wrap the original email link. Never navigate to or fetch a pasted URL.
-  if(url.origin==='https://www.google.com'&&url.pathname==='/url'){
-    try{url=new URL(url.searchParams.get('q')||url.searchParams.get('url')||'');}catch{throw new Error('Не удалось прочитать ссылку из письма.');}
-  }
-  const origin=process.env.NEXT_PUBLIC_SUPABASE_URL?.replace(/\/$/,'');
-  const token=url.searchParams.get('token')||url.searchParams.get('token_hash');
-  if(url.origin!==origin||url.pathname!=='/auth/v1/verify'||url.searchParams.get('type')!=='recovery'||!token||!(/^[a-f0-9]{40,128}$/i.test(token)))throw new Error('Нужна ссылка восстановления именно этой CRM из последнего письма.');
-  return token;
-}
+const expired='Код неверный, истёк или уже использован. Проверьте последнее письмо или запросите новый код.';
 
 export function PasswordRecovery(){
-  const [email,setEmail]=useState(''),[link,setLink]=useState(''),[password,setPassword]=useState(''),[confirm,setConfirm]=useState('');
+  const [email,setEmail]=useState(''),[requestedEmail,setRequestedEmail]=useState(''),[code,setCode]=useState(''),[password,setPassword]=useState(''),[confirm,setConfirm]=useState('');
   const [verified,setVerified]=useState(false),[busy,setBusy]=useState(false),[message,setMessage]=useState(''),[error,setError]=useState(''),[done,setDone]=useState(false);
+  const [nextSendAt,setNextSendAt]=useState(0),[now,setNow]=useState(0);
+  const remaining=Math.max(0,Math.ceil((nextSendAt-now)/1000));
   const started=useRef(false);
+  useEffect(()=>{if(!nextSendAt)return;const timer=setInterval(()=>setNow(Date.now()),1000);return()=>clearInterval(timer);},[nextSendAt]);
   useEffect(()=>{
     if(!db)return;
     let active=true;
@@ -42,18 +33,24 @@ export function PasswordRecovery(){
     return()=>{active=false;subscription.unsubscribe();};
   },[]);
   async function send(event:FormEvent){
-    event.preventDefault();if(!db||busy)return;setBusy(true);setError('');setMessage('');
+    event.preventDefault();if(!db||busy||Date.now()<nextSendAt)return;setBusy(true);setError('');setMessage('');
     try{
-      const {error}=await db.auth.resetPasswordForEmail(email.trim(),{redirectTo:window.location.origin+'/reset-password'});
+      const destination=(requestedEmail||email).trim().toLowerCase();
+      const {error}=await db.auth.resetPasswordForEmail(destination,{redirectTo:window.location.origin+'/reset-password'});
       if(error)throw error;
-      setMessage('Если адрес зарегистрирован, письмо отправлено. Если ссылка не открывается, скопируйте её из письма в поле ниже.');
-    }catch{setError('Не удалось отправить письмо. Попробуйте позже; проверьте, не пришло ли предыдущее письмо.');}finally{setBusy(false);}
+      setRequestedEmail(destination);setCode('');setNow(Date.now());setNextSendAt(Date.now()+60000);
+      setMessage('Если адрес зарегистрирован, код отправлен. Проверьте «Входящие» и «Спам».');
+    }catch{setError('Не удалось отправить код. Подождите немного и повторите попытку.');}finally{setBusy(false);}
   }
   async function verify(event:FormEvent){
-    event.preventDefault();if(!db||busy)return;setError('');
-    let token:string;try{token=recoveryHash(link);}catch(e){setError((e as Error).message);return;}
-    setBusy(true);setLink('');
-    try{const {data,error}=await db.auth.verifyOtp({token_hash:token,type:'recovery'});if(error||!data.session)throw new Error();setVerified(true);setMessage('');}catch{setError(expired);}finally{setBusy(false);}
+    event.preventDefault();if(!db||busy||!requestedEmail)return;setError('');
+    if(!/^\d{6}$/.test(code)){setError('Введите 6 цифр из письма.');return;}
+    setBusy(true);
+    try{
+      const {data,error}=await db.auth.verifyOtp({email:requestedEmail,token:code,type:'recovery'});
+      if(error){setError((error.code==='otp_expired'||error.status===403)?expired:error.status===429?'Слишком много попыток. Подождите немного и повторите.':'Не удалось проверить код. Проверьте соединение и повторите попытку.');return;}
+      if(!data.session)throw new Error();setCode('');setVerified(true);setMessage('');
+    }catch{setError('Не удалось проверить код. Проверьте соединение и повторите попытку.');}finally{setBusy(false);}
   }
   async function save(event:FormEvent){
     event.preventDefault();if(!db||busy)return;setError('');
@@ -74,12 +71,14 @@ export function PasswordRecovery(){
       <label className="field">Новый пароль<input type="password" autoComplete="new-password" minLength={12} required value={password} onChange={e=>setPassword(e.target.value)}/></label>
       <label className="field">Повторите пароль<input type="password" autoComplete="new-password" minLength={12} required value={confirm} onChange={e=>setConfirm(e.target.value)}/></label>
       <button className="button" disabled={busy}>{busy?'Сохраняем…':'Сохранить пароль'}</button>
-    </form>:<>
-      <p>Запросите письмо на email учётной записи. Используйте последнее письмо.</p>
-      <form onSubmit={send}><label className="field">Email<input type="email" autoComplete="username" required value={email} onChange={e=>setEmail(e.target.value)}/></label><button className="button" disabled={busy}>Отправить письмо</button></form>
-      <hr style={{margin:'24px 0',border:0,borderTop:'1px solid #dce2dc'}}/>
-      <h2>Письмо уже пришло?</h2><p>Если ссылка не открывается, скопируйте её из письма и вставьте здесь. Не отправляйте её в чат.</p>
-      <form onSubmit={verify}><label className="field">Ссылка из письма<input type="text" autoComplete="off" spellCheck={false} required value={link} onChange={e=>setLink(e.target.value)}/></label><button className="button" disabled={busy}>Проверить ссылку</button></form>
+    </form>:requestedEmail?<>
+      <p>Введите код из последнего письма для <strong>{requestedEmail}</strong>.</p>
+      <form onSubmit={verify}><label className="field">Код из письма<input type="text" inputMode="numeric" autoComplete="one-time-code" pattern="[0-9]{6}" maxLength={6} required value={code} onChange={e=>setCode(e.target.value.replace(/\D/g,'').slice(0,6))}/></label><button className="button" disabled={busy||code.length!==6}>{busy?'Проверяем…':'Подтвердить код'}</button></form>
+      <form onSubmit={send} style={{marginTop:16}}><button className="button secondary" disabled={busy||remaining>0}>{remaining>0?'Отправить код повторно через '+remaining+' с':'Отправить код повторно'}</button></form>
+      <p><button type="button" className="button secondary" disabled={busy} onClick={()=>{setRequestedEmail('');setCode('');setError('');setMessage('');}}>Изменить email</button></p>
+    </>:<>
+      <p>Укажите email учётной записи. На него придёт одноразовый код для создания нового пароля.</p>
+      <form onSubmit={send}><label className="field">Email<input type="email" autoComplete="username" required value={email} onChange={e=>setEmail(e.target.value)}/></label><button className="button" disabled={busy||remaining>0}>{remaining>0?'Повторная отправка через '+remaining+' с':busy?'Отправляем…':'Получить код'}</button></form>
     </>}
     {error&&<p role="alert" className="form-error">{error}</p>}{message&&<p role="status">{message}</p>}
     <p><a href="/">Вернуться ко входу в CRM</a></p>
