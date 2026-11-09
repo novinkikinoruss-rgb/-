@@ -8,7 +8,7 @@ permissions:
   contents: read
 jobs:
   interface:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 15
     env:
       NEXT_TELEMETRY_DISABLED: '1'
@@ -65,7 +65,7 @@ jobs:
           psql -d respectlogistic_dispatch_test -v ON_ERROR_STOP=1 -f tests/accounting-invoice-links.integration.sql
           psql -d respectlogistic_dispatch_test -v ON_ERROR_STOP=1 -f tests/company-balance.integration.sql
   authentication:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 10
     env:
       NEXT_TELEMETRY_DISABLED: '1'
