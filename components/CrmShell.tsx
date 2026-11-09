@@ -10,7 +10,7 @@ type Item={name:string;Icon:LucideIcon;active:boolean;disabled:boolean;count?:nu
 export function CrmShell({items,title,sessionName,authenticated,cloud,mobile,setMobile,onSignOut,children,dialogs}:{items:Item[];title:string;sessionName:string;authenticated:boolean;cloud:boolean;mobile:boolean;setMobile:Dispatch<SetStateAction<boolean>>;onSignOut:()=>void;children:ReactNode;dialogs?:ReactNode}){
  const navigation=useRef<HTMLElement>(null);
  const settings=useUiPreferences(),view=settings.values.tables as {density?:string;wrap?:boolean}|undefined;
- const density=view?.density==='comfortable'?'comfortable':'compact',wrap=view?.wrap!==false;
+ const density=view?.density==='comfortable'?'comfortable':'compact',wrap=view?.wrap===true;
  return <div className="app-shell crm-workspace" data-density={density} data-wrap={wrap?'true':'false'}>
   <header className="crm-header"><div className="crm-brand-group"><button className="icon-button mobile-toggle" aria-label="Открыть меню" aria-expanded={mobile} aria-controls="crm-navigation" onClick={()=>setMobile(!mobile)}><Menu size={20}/></button><a className="brand" href="/" aria-label="Транспорт CRM"><span className="brand-icon"><Mountain size={24}/></span><span>Транспорт<span className="brand-sub">RESPECTLOGISTIC · CRM</span></span></a></div>
    <div className="topbar-right"><SystemStatus/><NotificationBell/><span className="divider"/><span className="user-label">{sessionName}</span><span className="avatar">{sessionName.slice(0,1).toUpperCase()}</span>{cloud&&authenticated&&<button className="icon-button crm-logout" aria-label="Выйти из CRM" title="Выйти из CRM" onClick={onSignOut}><LogOut size={18}/></button>}</div>
